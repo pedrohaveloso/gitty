@@ -26,7 +26,6 @@ source-repository head
 library
   exposed-modules:
       Gitty
-      Gitty.Object
   other-modules:
       Paths_gitty
   autogen-modules:

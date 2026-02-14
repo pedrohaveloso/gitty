@@ -14,10 +14,10 @@ main = do
   case arg of
     "init" -> do
       x <- Gitty.init workDir
-      print x
+      putStrLn x
     "add" -> do
-      x <- Gitty.add workDir (tail args)
+      x <- Gitty.add (tail args) workDir
       case x of
         Left err -> putStrLn err
-        Right msg -> putStrLn msg
+        Right _ -> putStrLn "success"
     _ -> print "error"

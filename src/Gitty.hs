@@ -3,26 +3,29 @@
 module Gitty (init, add) where
 
 import Codec.Compression.Zlib (compress, decompress)
-import Control.Exception (IOException, try)
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS.Char8
+import qualified Data.ByteString.Char8 as C
+import Data.Char (toLower)
 import Data.Function ((&))
 import Data.List (intercalate)
 import qualified Data.Map as Map
-import qualified Gitty.Object as Object
 import qualified System.Directory as Directory
 import System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import Text.Printf (printf)
 import Prelude hiding (init)
 
-sha1 :: (Foldable t) => t BS.ByteString -> BS.ByteString
-sha1 content = result
-  where
-    ctx = SHA1.init
-    updatedCtx = foldl SHA1.update ctx content
-    result = SHA1.finalize updatedCtx
+type WorkDir = FilePath
+
+-- move to objects
+blobType :: String
+blobType = "blob"
+
+-- index
+-- objects/*
+-- refs/heads/
+-- refs/tags/
 
 gittyDir :: FilePath -> FilePath
 gittyDir workDir = workDir ++ "/.gitty"
@@ -31,37 +34,47 @@ gittyDir workDir = workDir ++ "/.gitty"
 objectsDir :: FilePath -> FilePath
 objectsDir = (++ "/objects") . gittyDir
 
-init :: String -> IO String
+reinitialize :: IO String
+reinitialize = return "Reinitialized existing repository"
+
+initialize :: WorkDir -> IO String
+initialize workDir = do
+  Directory.createDirectoryIfMissing True $ gittyDir workDir
+  return "Initialized empty repository"
+
+init :: WorkDir -> IO String
 init workDir = do
-  exists <- Directory.doesDirectoryExist dir
-  if exists then reinitialize else initialize
-  where
-    dir :: String
-    dir = gittyDir workDir
+  isInit <- checkIsInit workDir
+  if isInit then reinitialize else initialize workDir
 
-    reinitialize :: IO String
-    reinitialize = return "Reinitialized existing repository"
+checkIsInit :: FilePath -> IO Bool
+checkIsInit = Directory.doesDirectoryExist . gittyDir
 
-    initialize :: IO String
-    initialize = do
-      Directory.createDirectoryIfMissing True dir
-      return "Initialized empty repository"
+needIsInit :: (WorkDir -> IO (Either String ())) -> WorkDir -> IO (Either String ())
+needIsInit fn workDir = do
+  isInit <- checkIsInit workDir
 
+  if isInit
+    then fn workDir
+    else return $ Left "Error: not a repository"
+
+-- todo
 type FileHash = String
 
 data Index = Index
   { indexFiles :: Map.Map FilePath FileHash
   }
 
-writeIndex :: FilePath -> Index -> IO ()
+writeIndex :: WorkDir -> Index -> IO ()
 writeIndex workDir (Index files) = do
   let indexPath = gittyDir workDir ++ "/index"
-      lines = map (\(p, h) -> BS.Char8.pack $ p ++ "," ++ h) (Map.toList files)
-      content = BS.Char8.intercalate (str2bs "\n") lines
+      lines = map (\(p, h) -> C.pack $ p ++ "," ++ h) (Map.toList files)
+      content = C.intercalate (str2bs "\n") lines
       compressed = BS.toStrict $ compress $ BS.fromStrict content
   BS.writeFile indexPath compressed
 
-readIndex :: FilePath -> IO Index
+-- todo
+readIndex :: WorkDir -> IO Index
 readIndex workDir = do
   let indexPath = gittyDir workDir ++ "/index"
   exists <- Directory.doesFileExist indexPath
@@ -70,12 +83,12 @@ readIndex workDir = do
     else do
       compressed <- BS.readFile indexPath
       let content = BS.toStrict $ decompress $ BS.fromStrict compressed
-          lines = filter (not . BS.null) $ BS.Char8.split '\n' content
+          lines = filter (not . BS.null) $ C.split '\n' content
           entries =
             map
               ( \line ->
-                  let [p, h] = BS.Char8.split ',' line
-                   in (BS.Char8.unpack p, BS.Char8.unpack h)
+                  let [p, h] = C.split ',' line
+                   in (C.unpack p, C.unpack h)
               )
               lines
       return $ Index $ Map.fromList entries
@@ -84,10 +97,10 @@ bs2hex :: BS.ByteString -> String
 bs2hex = concatMap (printf "%02x") . BS.unpack
 
 str2bs :: String -> BS.ByteString
-str2bs = BS.Char8.pack
+str2bs = C.pack
 
 bs2str :: BS.ByteString -> String
-bs2str = BS.Char8.unpack
+bs2str = C.unpack
 
 -- hashFile =
 
@@ -102,47 +115,43 @@ getNonExistentPaths paths = result
     relation = mapM (\path -> (path,) <$> Directory.doesPathExist path) paths
     result = fmap (map (\(path, _) -> path) . filter (\(_, exists) -> not exists)) relation
 
-add :: FilePath -> [FilePath] -> IO (Either String String)
-add workDir paths = do
-  let absolutePaths = map (makeAbsoluteFrom workDir) paths
-  nonExistentPaths <- getNonExistentPaths absolutePaths
+add :: [FilePath] -> WorkDir -> IO (Either String ())
+add paths =
+  needIsInit
+    ( \workDir -> do
+        let absolutePaths = map (makeAbsoluteFrom workDir) paths
+        let relativePaths = map (FilePath.makeRelative workDir) absolutePaths
 
-  if null nonExistentPaths
-    then add' absolutePaths >>= return . Right
-    else return $ Left $ nonExistentPathsError nonExistentPaths
+        nonExistentPaths <- getNonExistentPaths relativePaths
+
+        if null nonExistentPaths
+          then add' workDir relativePaths >>= return . Right
+          else return $ Left $ nonExistentPathsError nonExistentPaths
+    )
   where
     nonExistentPathsError :: [FilePath] -> String
     nonExistentPathsError nonExistentPaths =
       "The following files do not exist in the root directory of the current repository:\n"
         ++ (intercalate "\n" $ map ("• " ++) nonExistentPaths)
 
-    add' :: [FilePath] -> IO String
-    add' [] = return ""
-    add' (path : rest) = do
-      added <- add' rest
-
+    add' :: WorkDir -> [FilePath] -> IO ()
+    add' _ [] = return ()
+    add' workDir (path : rest) = do
+      _ <- add' workDir rest
       isFile <- Directory.doesFileExist path
+      if isFile then addFile workDir path else addDir workDir path
 
-      result <-
-        if isFile
-          then addFile path
-          else addDir path
-
-      return $ added ++ result
-
-    addFile :: FilePath -> IO String
-    addFile filePath = do
+    addFile :: WorkDir -> FilePath -> IO ()
+    addFile workDir filePath = do
       originalContent <- BS.readFile filePath
 
       let contentLength = BS.length originalContent
-          contentHeader = str2bs $ Object.blobType <> " " <> show contentLength
+          contentHeader = str2bs $ blobType <> " " <> show contentLength
 
           content = contentHeader <> str2bs "\0" <> originalContent
 
           hashedContent = content & SHA1.hash & bs2hex
           compressedContent = content & BS.fromStrict & compress & BS.toStrict
-
-          hashedPath = take 2 hashedContent <> "/" <> drop 2 hashedContent
 
           fileDir = objectsDir workDir <> "/" <> take 2 hashedContent
           fileName = fileDir <> "/" <> drop 2 hashedContent
@@ -151,12 +160,52 @@ add workDir paths = do
       BS.writeFile fileName compressedContent
 
       index <- readIndex workDir
-      let idxFiles = indexFiles index & Map.insert filePath hashedPath
+      let idxFiles = indexFiles index & Map.insert filePath hashedContent
       writeIndex workDir (Index {indexFiles = idxFiles})
 
-      let relativeFilepath = FilePath.makeRelative workDir filePath
+      return ()
 
-      return $ "File '" <> relativeFilepath <> "' added"
+    addDir :: WorkDir -> FilePath -> IO ()
+    addDir workDir dirPath = undefined -- todo
 
-    addDir :: FilePath -> IO String
-    addDir dirPath = undefined
+commit :: WorkDir
+commit = undefined
+
+type ObjectHash = String
+
+type ObjectContent = BS.ByteString
+
+type ObjectRawContent = BS.ByteString
+
+data ObjectKind = Blob | Commit | Tree | Tag
+  deriving (Show)
+
+objectKindToString :: ObjectKind -> String
+objectKindToString = (map toLower) . show
+
+makeObjectContent :: ObjectRawContent -> ObjectKind -> ObjectContent
+makeObjectContent rawContent kind = content
+  where
+    contentLength = BS.length rawContent
+    contentHeader = C.pack $ objectKindToString kind <> " " <> show contentLength
+    content = contentHeader <> str2bs "\0" <> rawContent
+
+hashObject :: WorkDir -> ObjectKind -> BS.ByteString -> (ObjectHash, ObjectContent)
+hashObject workDir objectType originalContent = ()
+  where
+    contentLength = BS.length originalContent
+
+    contentHeader = C.pack $ objectKindToString objectType <> " " <> show contentLength
+
+    content = contentHeader <> str2bs "\0" <> originalContent
+
+    hashedContent = content & SHA1.hash & bs2hex
+    compressedContent = content & BS.fromStrict & compress & BS.toStrict
+
+    fileDir = objectsDir workDir <> "/" <> take 2 hashedContent
+    fileName = fileDir <> "/" <> drop 2 hashedContent
+
+writeObject :: WorkDir -> (ObjectHash, ObjectContent) -> IO ()
+writeObject workDir = do
+  Directory.createDirectory fileDir
+  BS.writeFile fileName compressedContent
