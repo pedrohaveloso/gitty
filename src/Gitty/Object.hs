@@ -1,51 +1,84 @@
-module Gitty.Object (makeContent, hashContent, writeContent) where
+module Gitty.Object
+  ( Hash,
+    Content,
+    RawContent,
+    makeContent,
+    hashContent,
+    writeContent,
+    readContent,
+    kindFromString,
+    kindToString,
+  )
+where
 
-import Codec.Compression.Zlib (compress, decompress)
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as C
 import Data.Char (toLower)
 import Data.Function ((&))
-import Data.List (intercalate)
-import qualified Data.Map as Map
-import Gitty.Prelude (WorkDir, bsToHex)
+import Gitty.Compression (compress, decompress)
+import Gitty.Prelude (WorkDir, bsToHex, repoDir)
 import qualified System.Directory as Directory
-import System.FilePath ((</>))
-import qualified System.FilePath as FilePath
-import Text.Printf (printf)
-import Prelude hiding (init)
 
-type ObjectHash = String
+type Hash = String
 
-type ObjectContent = BS.ByteString
+type Content = BS.ByteString
 
-type ObjectRawContent = BS.ByteString
+type RawContent = BS.ByteString
 
 data ObjectKind = Blob | Commit | Tree | Tag
   deriving (Show)
 
 dir :: FilePath -> FilePath
-dir = (++ "/objects") . gittyDir
+dir = (++ "/objects") . repoDir
+
+kindFromString :: String -> ObjectKind
+kindFromString "commit" = Commit
+kindFromString "tree" = Tree
+kindFromString "tag" = Tag
+kindFromString _ = Blob
 
 kindToString :: ObjectKind -> String
 kindToString = (map toLower) . show
 
-makeContent :: ObjectRawContent -> ObjectKind -> ObjectContent
+makeContent :: RawContent -> ObjectKind -> Content
 makeContent rawContent kind = content
   where
     contentLength = BS.length rawContent
     contentHeader = C.pack $ kindToString kind <> " " <> show contentLength
     content = contentHeader <> C.pack "\0" <> rawContent
 
-hashContent :: WorkDir -> ObjectContent -> ObjectHash
-hashContent workDir content = ()
-  where
-    hashedContent = content & SHA1.hash & bsToHex
-    fileDir = dir workDir <> "/" <> take 2 hashedContent
-    fileName = fileDir <> "/" <> drop 2 hashedContent
+hashContent :: Content -> Hash
+hashContent content = content & SHA1.hash & bsToHex
 
-writeContent :: WorkDir -> (ObjectHash, ObjectContent) -> IO ()
-writeContent workDir = do
-  compressedContent = content & BS.fromStrict & compress & BS.toStrict
+makeFileDir :: WorkDir -> Hash -> FilePath
+makeFileDir workDir hash = dir workDir <> "/" <> take 2 hash
+
+makeFilePath :: WorkDir -> Hash -> FilePath
+makeFilePath workDir hash = (makeFileDir workDir hash) <> "/" <> drop 2 hash
+
+writeContent :: WorkDir -> Hash -> Content -> IO ()
+writeContent workDir hash content = do
   Directory.createDirectory fileDir
-  BS.writeFile fileName compressedContent
+  BS.writeFile filePath compressed
+  where
+    compressed = compress content
+    fileDir = makeFileDir workDir hash
+    filePath = makeFilePath workDir hash
+
+readContent :: WorkDir -> Hash -> IO (Maybe Content)
+readContent workDir hash = do
+  exists <- Directory.doesFileExist filePath
+
+  if exists
+    then readContent'
+    else return Nothing
+  where
+    filePath = makeFilePath workDir hash
+
+    readContent' :: IO (Maybe Content)
+    readContent' = do
+      content <- BS.readFile filePath
+      let decompressed = decompress content
+
+      return $ Just decompressed

@@ -26,6 +26,9 @@ source-repository head
 library
   exposed-modules:
       Gitty
+      Gitty.Compression
+      Gitty.Object
+      Gitty.Prelude
   other-modules:
       Paths_gitty
   autogen-modules:
@@ -40,6 +43,7 @@ library
     , cryptohash-sha1 >=0.11.101.0
     , directory >=1.3.8.5
     , filepath >=1.5.4.0
+    , optparse-applicative >=0.18.1.0
     , zlib >=0.7.1.1
   default-language: Haskell2010
 
@@ -60,6 +64,7 @@ executable gitty
     , directory >=1.3.8.5
     , filepath >=1.5.4.0
     , gitty
+    , optparse-applicative >=0.18.1.0
     , zlib >=0.7.1.1
   default-language: Haskell2010
 
@@ -81,5 +86,6 @@ test-suite gitty-test
     , directory >=1.3.8.5
     , filepath >=1.5.4.0
     , gitty
+    , optparse-applicative >=0.18.1.0
     , zlib >=0.7.1.1
   default-language: Haskell2010
