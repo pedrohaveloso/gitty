@@ -1,4 +1,4 @@
-module Gitty (hashObject) where
+module Gitty (WorkDir, fatal, repoExists) where
 
 import qualified Data.ByteString as BS
 import qualified Gitty.Object as Object
@@ -8,29 +8,12 @@ import qualified System.Directory as Directory
 needRepo :: WorkDir -> a -> IO a
 needRepo workDir a = return a
 
-type HashObjectOptions = (Bool, String, FilePath)
+-- todo
+repoExists :: IO Bool
+repoExists = return True
 
-hashObject :: WorkDir -> HashObjectOptions -> IO (Either String Object.Hash)
-hashObject workDir (write, kind, file) = do
-  exists <- Directory.doesFileExist file
-
-  if exists
-    then hashObject'
-    else return $ Left "Fatal: file don't exists"
-  where
-    kind' = Object.kindFromString kind
-
-    hashObject' = do
-      rawContent <- BS.readFile file
-
-      let content = Object.makeContent rawContent kind'
-          hash = Object.hashContent content
-
-      if write
-        then do
-          Object.writeContent workDir hash content
-          return $ pure hash
-        else return $ pure hash
+fatal :: String -> IO ()
+fatal msg = putStrLn $ "Fatal error:\n'" <> msg <> "'"
 
 -- {-# LANGUAGE TupleSections #-}
 

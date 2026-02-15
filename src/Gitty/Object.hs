@@ -2,6 +2,7 @@ module Gitty.Object
   ( Hash,
     Content,
     RawContent,
+    Kind (..),
     makeContent,
     hashContent,
     writeContent,
@@ -12,8 +13,8 @@ module Gitty.Object
 where
 
 import qualified Crypto.Hash.SHA1 as SHA1
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString as ByteString
+import qualified Data.ByteString.Char8 as Char8
 import Data.Char (toLower)
 import Data.Function ((&))
 import Gitty.Compression (compress, decompress)
@@ -22,31 +23,31 @@ import qualified System.Directory as Directory
 
 type Hash = String
 
-type Content = BS.ByteString
+type Content = ByteString.ByteString
 
-type RawContent = BS.ByteString
+type RawContent = ByteString.ByteString
 
-data ObjectKind = Blob | Commit | Tree | Tag
+data Kind = Blob | Commit | Tree | Tag
   deriving (Show)
 
 dir :: FilePath -> FilePath
 dir = (++ "/objects") . repoDir
 
-kindFromString :: String -> ObjectKind
+kindFromString :: String -> Kind
 kindFromString "commit" = Commit
 kindFromString "tree" = Tree
 kindFromString "tag" = Tag
 kindFromString _ = Blob
 
-kindToString :: ObjectKind -> String
+kindToString :: Kind -> String
 kindToString = (map toLower) . show
 
-makeContent :: RawContent -> ObjectKind -> Content
+makeContent :: RawContent -> Kind -> Content
 makeContent rawContent kind = content
   where
-    contentLength = BS.length rawContent
-    contentHeader = C.pack $ kindToString kind <> " " <> show contentLength
-    content = contentHeader <> C.pack "\0" <> rawContent
+    contentLength = ByteString.length rawContent
+    contentHeader = Char8.pack $ kindToString kind <> " " <> show contentLength
+    content = contentHeader <> Char8.pack "\0" <> rawContent
 
 hashContent :: Content -> Hash
 hashContent content = content & SHA1.hash & bsToHex
@@ -60,7 +61,7 @@ makeFilePath workDir hash = (makeFileDir workDir hash) <> "/" <> drop 2 hash
 writeContent :: WorkDir -> Hash -> Content -> IO ()
 writeContent workDir hash content = do
   Directory.createDirectory fileDir
-  BS.writeFile filePath compressed
+  ByteString.writeFile filePath compressed
   where
     compressed = compress content
     fileDir = makeFileDir workDir hash
@@ -78,7 +79,7 @@ readContent workDir hash = do
 
     readContent' :: IO (Maybe Content)
     readContent' = do
-      content <- BS.readFile filePath
+      content <- ByteString.readFile filePath
       let decompressed = decompress content
 
       return $ Just decompressed

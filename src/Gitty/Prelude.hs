@@ -5,13 +5,13 @@ module Gitty.Prelude
   )
 where
 
-import qualified Data.ByteString as BS
+import qualified Data.ByteString as ByteString
 import Text.Printf (printf)
 
 type WorkDir = FilePath
 
-bsToHex :: BS.ByteString -> String
-bsToHex = concatMap (printf "%02x") . BS.unpack
+bsToHex :: ByteString.ByteString -> String
+bsToHex = concatMap (printf "%02x") . ByteString.unpack
 
 repoDir :: FilePath -> FilePath
 repoDir workDir = workDir ++ "/.gitty"

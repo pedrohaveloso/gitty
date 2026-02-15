@@ -29,6 +29,9 @@ library
       Gitty.Compression
       Gitty.Object
       Gitty.Prelude
+      GittyCli
+      GittyCli.Command
+      GittyCli.Command.HashObject
   other-modules:
       Paths_gitty
   autogen-modules:

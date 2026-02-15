@@ -1,11 +1,11 @@
 module Gitty.Compression (compress, decompress) where
 
 import qualified Codec.Compression.Zlib as Zlib
-import qualified Data.ByteString as BS
+import qualified Data.ByteString as ByteString
 import Data.Function ((&))
 
-compress :: BS.ByteString -> BS.ByteString
-compress bs = bs & BS.fromStrict & Zlib.compress & BS.toStrict
+compress :: ByteString.ByteString -> ByteString.ByteString
+compress bs = bs & ByteString.fromStrict & Zlib.compress & ByteString.toStrict
 
-decompress :: BS.ByteString -> BS.ByteString
-decompress bs = bs & BS.fromStrict & Zlib.decompress & BS.toStrict
+decompress :: ByteString.ByteString -> ByteString.ByteString
+decompress bs = bs & ByteString.fromStrict & Zlib.decompress & ByteString.toStrict

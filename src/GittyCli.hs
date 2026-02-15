@@ -1,81 +1,37 @@
 module GittyCli (run) where
 
-import qualified Gitty
-import qualified Gitty.Object
 import qualified GittyCli.Command as Command
 import Options.Applicative
   ( Parser,
-    argument,
-    command,
     execParser,
     fullDesc,
     header,
-    help,
     helper,
     info,
-    long,
-    metavar,
     progDesc,
-    short,
-    showDefault,
-    str,
-    strOption,
-    subparser,
-    switch,
-    value,
     (<**>),
   )
+import qualified System.Directory as Directory
 
 data Options = Options
-  { commandKind :: Command.Available
+  { command :: Command.Available
   }
   deriving (Show)
 
-hashObjectParser :: Parser Command
-hashObjectParser =
-  HashObject
-    <$> ( HashObjectOptions
-            <$> switch
-              ( long "write"
-                  <> short 'w'
-                  <> help "Actually write the object into the database"
-              )
-            <*> strOption
-              ( long "kind"
-                  <> short 'k'
-                  <> value "blob"
-                  <> showDefault
-                  <> metavar "KIND"
-                  <> help "Specify the kind (blob, commit, tree, tag)"
-              )
-            <*> argument
-              str
-              ( metavar "FILE"
-                  <> help "File to hash"
-              )
-        )
-
-commandParser :: Parser Command
-commandParser =
-  subparser
-    ( command
-        "hash-object"
-        ( info
-            hashObjectParser
-            (progDesc "Compute object ID and optionally creates a blob from a file")
-        )
-    )
+optionsParser :: Parser Options
+optionsParser = Options <$> Command.parser
 
 run :: IO ()
 run = do
-  Options {commandKind = cmd} <-
+  opts <-
     execParser $
       info
-        (Options <$> commandParser <**> helper)
+        (optionsParser <**> helper)
         ( fullDesc
             <> progDesc "Pseudo-Git implementation in Haskell"
             <> header "Gitty"
         )
 
-  case cmd of
-    HashObject o -> runHashObjectCommand o
+  workDir <- Directory.getCurrentDirectory
+
+  Command.run workDir (command opts)
