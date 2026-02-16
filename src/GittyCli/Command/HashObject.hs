@@ -1,4 +1,10 @@
-module GittyCli.Command.HashObject (Options, parser, run) where
+module GittyCli.Command.HashObject
+  ( Options,
+    parser,
+    run,
+    hashObject,
+  )
+where
 
 import qualified Data.ByteString as ByteString
 import qualified Gitty
@@ -49,24 +55,35 @@ parser =
       )
 
 run :: WorkDir -> Options -> IO ()
-run workDir (Options {write = w, kind = k, file = f}) = do
+run workDir options = do
+  result <- hashObject workDir options
+
+  case result of
+    Left err -> Gitty.fatal err
+    Right hash -> Gitty.msg hash
+
+hashObject :: WorkDir -> Options -> IO (Either String Object.Hash)
+hashObject workDir (Options {write = w, kind = k, file = f}) = do
   fileExists <- Directory.doesFileExist f
   fileReadable <- Directory.readable <$> Directory.getPermissions f
 
-  runValidated fileExists fileReadable
+  validate fileExists fileReadable
   where
-    runValidated exists readable
-      | not exists = Gitty.fatal $ "The file " <> f <> " was not found."
-      | not readable = Gitty.fatal $ "The file " <> f <> " is not readable."
-      | otherwise = hashObject >>= putStrLn
+    validate :: Bool -> Bool -> IO (Either String Object.Hash)
+    validate exists readable
+      | not exists = pure $ Left $ "The file " <> f <> " was not found."
+      | not readable = pure $ Left $ "The file " <> f <> " is not readable."
+      | otherwise = hashObject'
 
-    hashObject :: IO String
-    hashObject = do
+    hashObject' :: IO (Either String Object.Hash)
+    hashObject' = do
       rawContent <- ByteString.readFile f
 
       let content = Object.makeContent rawContent (Object.kindFromString k)
           hash = Object.hashContent content
 
       if w
-        then Object.writeContent workDir hash content >> return hash
-        else return hash
+        then do
+          Object.writeContent workDir hash content
+          return $ Right hash
+        else return $ Right hash

@@ -1,4 +1,4 @@
-module Gitty (WorkDir, fatal, repoExists) where
+module Gitty (WorkDir, fatal, msg, repoExists) where
 
 import qualified Data.ByteString as BS
 import qualified Gitty.Object as Object
@@ -13,7 +13,10 @@ repoExists :: IO Bool
 repoExists = return True
 
 fatal :: String -> IO ()
-fatal msg = putStrLn $ "Fatal error:\n'" <> msg <> "'"
+fatal m = putStrLn $ "Fatal error:\n'" <> m <> "'"
+
+msg :: String -> IO ()
+msg = putStrLn
 
 -- {-# LANGUAGE TupleSections #-}
 
