@@ -9,6 +9,7 @@ module Gitty.Object
     readContent,
     kindFromString,
     kindToString,
+    hashFile,
   )
 where
 
@@ -18,7 +19,8 @@ import qualified Data.ByteString.Char8 as Char8
 import Data.Char (toLower)
 import Data.Function ((&))
 import Gitty.Compression (compress, decompress)
-import Gitty.Prelude (WorkDir, bsToHex, repoDir)
+import Gitty.Prelude (WorkDir, bsToHex, makeAbsoluteFrom, repoDir)
+import qualified Gitty.Validation as Validation
 import qualified System.Directory as Directory
 
 type Hash = String
@@ -83,3 +85,27 @@ readContent workDir hash = do
       let decompressed = decompress content
 
       return $ Just decompressed
+
+hashFile :: WorkDir -> Bool -> Kind -> FilePath -> IO (Either String Hash)
+hashFile workDir write kind file = do
+  fileError <- Validation.fileAccess workDir file
+
+  case fileError of
+    Nothing -> hashFile'
+    Just err -> return $ Left err
+  where
+    absoluteFile :: String
+    absoluteFile = makeAbsoluteFrom workDir file
+
+    hashFile' :: IO (Either String Hash)
+    hashFile' = do
+      rawContent <- ByteString.readFile absoluteFile
+
+      let content = makeContent rawContent kind
+          hash = hashContent content
+
+      if write
+        then do
+          writeContent workDir hash content
+          return $ Right hash
+        else return $ Right hash

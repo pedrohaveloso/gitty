@@ -1,4 +1,4 @@
-module Gitty (WorkDir, fatal, msg, repoExists) where
+module Gitty (fatal, msg) where
 
 import qualified Data.ByteString as BS
 import qualified Gitty.Object as Object
@@ -9,8 +9,6 @@ needRepo :: WorkDir -> a -> IO a
 needRepo workDir a = return a
 
 -- todo
-repoExists :: IO Bool
-repoExists = return True
 
 fatal :: String -> IO ()
 fatal m = putStrLn $ "Fatal error:\n'" <> m <> "'"

@@ -2,6 +2,7 @@ module GittyCli.Command (Available (..), parser, run) where
 
 import qualified Gitty
 import Gitty.Prelude (WorkDir)
+import qualified Gitty.Validation as Gitty.Validation
 import qualified GittyCli.Command.HashObject as HashObject
 import Options.Applicative
   ( Parser,
@@ -26,17 +27,14 @@ parser =
         )
     )
 
+needRepo :: ((WorkDir -> options -> IO ()), options) -> WorkDir -> IO ()
+needRepo (fn, options) workDir = do
+  repoExists <- Gitty.Validation.repoExists workDir
+
+  case repoExists of
+    Nothing -> fn workDir options
+    Just err -> Gitty.fatal err
+
 run :: WorkDir -> Available -> IO ()
 run workDir cmd = case cmd of
-  HashObject opts -> run' True opts HashObject.run
-  where
-    run' :: Bool -> options -> (WorkDir -> options -> IO ()) -> IO ()
-    run' needRepo options fn =
-      if needRepo
-        then do
-          repoExists <- Gitty.repoExists
-
-          if repoExists
-            then fn workDir options
-            else Gitty.fatal "There is no repository in that folder."
-        else fn workDir options
+  HashObject opts -> needRepo (HashObject.run, opts) workDir
