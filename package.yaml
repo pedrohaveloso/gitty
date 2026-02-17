@@ -26,14 +26,15 @@ dependencies:
 - bytestring >= 0.12.2.0
 - directory >= 1.3.8.5
 - filepath >= 1.5.4.0
+- split >= 0.2
 
 # crypto
 - cryptohash-sha1 >= 0.11.101.0
-
 # compression
 - zlib >= 0.7.1.1
-
-# todo: remove
+# posix
+- unix >= 2.8
+# terminal commands parser
 - optparse-applicative >= 0.18.1.0
 
 ghc-options:

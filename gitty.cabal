@@ -27,11 +27,14 @@ library
   exposed-modules:
       Gitty
       Gitty.Compression
+      Gitty.Index
       Gitty.Object
       Gitty.Prelude
+      Gitty.Validation
       GittyCli
       GittyCli.Command
       GittyCli.Command.HashObject
+      GittyCli.Command.UpdateIndex
   other-modules:
       Paths_gitty
   autogen-modules:
@@ -47,6 +50,8 @@ library
     , directory >=1.3.8.5
     , filepath >=1.5.4.0
     , optparse-applicative >=0.18.1.0
+    , split >=0.2
+    , unix >=2.8
     , zlib >=0.7.1.1
   default-language: Haskell2010
 
@@ -68,6 +73,8 @@ executable gitty
     , filepath >=1.5.4.0
     , gitty
     , optparse-applicative >=0.18.1.0
+    , split >=0.2
+    , unix >=2.8
     , zlib >=0.7.1.1
   default-language: Haskell2010
 
@@ -90,5 +97,7 @@ test-suite gitty-test
     , filepath >=1.5.4.0
     , gitty
     , optparse-applicative >=0.18.1.0
+    , split >=0.2
+    , unix >=2.8
     , zlib >=0.7.1.1
   default-language: Haskell2010

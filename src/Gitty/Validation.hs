@@ -31,3 +31,8 @@ fileAccess workDir file = do
 
     inRepo :: Bool
     inRepo = workDir `isPrefixOf` absoluteFile
+
+
+
+multipleValidations :: [IO (Maybe ValidationError)] -> Maybe ValidationError
+multipleValidations validations = undefined

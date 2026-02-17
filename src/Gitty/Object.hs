@@ -62,7 +62,7 @@ makeFilePath workDir hash = (makeFileDir workDir hash) <> "/" <> drop 2 hash
 
 writeContent :: WorkDir -> Hash -> Content -> IO ()
 writeContent workDir hash content = do
-  Directory.createDirectory fileDir
+  Directory.createDirectoryIfMissing True fileDir
   ByteString.writeFile filePath compressed
   where
     compressed = compress content
@@ -72,19 +72,13 @@ writeContent workDir hash content = do
 readContent :: WorkDir -> Hash -> IO (Maybe Content)
 readContent workDir hash = do
   exists <- Directory.doesFileExist filePath
-
   if exists
-    then readContent'
+    then do
+      content <- ByteString.readFile filePath
+      return $ Just $ decompress content
     else return Nothing
   where
     filePath = makeFilePath workDir hash
-
-    readContent' :: IO (Maybe Content)
-    readContent' = do
-      content <- ByteString.readFile filePath
-      let decompressed = decompress content
-
-      return $ Just decompressed
 
 hashFile :: WorkDir -> Bool -> Kind -> FilePath -> IO (Either String Hash)
 hashFile workDir write kind file = do
