@@ -1,15 +1,5 @@
 module Gitty (fatal, msg) where
 
-import qualified Data.ByteString as BS
-import qualified Gitty.Object as Object
-import Gitty.Prelude (WorkDir)
-import qualified System.Directory as Directory
-
-needRepo :: WorkDir -> a -> IO a
-needRepo workDir a = return a
-
--- todo
-
 fatal :: String -> IO ()
 fatal m = putStrLn $ "Fatal error:\n'" <> m <> "'"
 

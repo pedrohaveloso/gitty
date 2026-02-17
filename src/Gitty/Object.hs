@@ -65,7 +65,7 @@ makeFilePath :: WorkDir -> Hash -> FilePath
 makeFilePath workDir hash = filePath
   where
     fileDir = makeFileDir workDir hash
-    filePath = fileDir <> "/" <> drop 2 hash <> "/" <> drop 2 hash
+    filePath = fileDir <> "/" <> drop 2 hash
 
 writeContent :: WorkDir -> Hash -> Content -> IO ()
 writeContent workDir hash content = do

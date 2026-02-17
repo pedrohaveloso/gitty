@@ -1,9 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
 module GittyCli.Command.UpdateIndex (Options (..), parser, run) where
 
+import qualified Gitty
 import Gitty.Index (UpdateIndexOptions (..))
 import qualified Gitty.Index as Index
 import qualified Gitty.Object as Object
@@ -89,31 +91,26 @@ run workDir options = do
     then
       mapM_
         ( \file ->
-            do
-              y <-
-                Index.updateIndex
-                  workDir
-                  Index.defaultUpdateIndexOptions {add = options.add, file = file}
-              case y of
-                Left err -> print err
-                Right _ -> return ()
+            runSingle
+              Index.defaultUpdateIndexOptions {add = options.add, file = file}
         )
         options.files
     else
       mapM_
-        ( \cacheInfo -> do
-            y <-
-              Index.updateIndex
-                workDir
-                Index.defaultUpdateIndexOptions
-                  { add = options.add,
-                    file = cacheInfo.file,
-                    mode = Just cacheInfo.mode,
-                    object = Just cacheInfo.object
-                  }
-
-            case y of
-              Left err -> print err
-              Right _ -> return ()
+        ( \cacheInfo ->
+            runSingle
+              Index.defaultUpdateIndexOptions
+                { add = options.add,
+                  file = cacheInfo.file,
+                  mode = Just cacheInfo.mode,
+                  object = Just cacheInfo.object
+                }
         )
         options.cacheInfos
+  where
+    runSingle :: UpdateIndexOptions -> IO ()
+    runSingle opts =
+      Index.updateIndex workDir opts
+        >>= \case
+          Left err -> Gitty.msg err
+          Right _ -> return ()
