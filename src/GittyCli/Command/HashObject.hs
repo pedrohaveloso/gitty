@@ -1,3 +1,7 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE NoFieldSelectors #-}
+
 module GittyCli.Command.HashObject (Options, parser, run) where
 
 import qualified Gitty
@@ -47,11 +51,11 @@ parser =
       )
 
 run :: WorkDir -> Options -> IO ()
-run workDir (Options {write = w, kind = k, file = f}) = do
-  result <- Object.hashFile workDir w kind' f
+run workDir options = do
+  result <- Object.hashFile workDir options.write kind options.file
 
   case result of
     Left err -> Gitty.fatal err
     Right hash -> Gitty.msg hash
   where
-    kind' = Object.kindFromString k
+    kind = Object.kindFromString options.kind

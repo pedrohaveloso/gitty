@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Gitty.Object
   ( Hash,
     Content,
@@ -9,10 +11,12 @@ module Gitty.Object
     readContent,
     kindFromString,
     kindToString,
+    validateHash,
     hashFile,
   )
 where
 
+import Control.Monad (when)
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
@@ -32,8 +36,8 @@ type RawContent = ByteString.ByteString
 data Kind = Blob | Commit | Tree | Tag
   deriving (Show)
 
-dir :: FilePath -> FilePath
-dir = (++ "/objects") . repoDir
+objectsDir :: FilePath -> FilePath
+objectsDir = (++ "/objects") . repoDir
 
 kindFromString :: String -> Kind
 kindFromString "commit" = Commit
@@ -42,7 +46,7 @@ kindFromString "tag" = Tag
 kindFromString _ = Blob
 
 kindToString :: Kind -> String
-kindToString = (map toLower) . show
+kindToString = map toLower . show
 
 makeContent :: RawContent -> Kind -> Content
 makeContent rawContent kind = content
@@ -55,10 +59,13 @@ hashContent :: Content -> Hash
 hashContent content = content & SHA1.hash & bsToHex
 
 makeFileDir :: WorkDir -> Hash -> FilePath
-makeFileDir workDir hash = dir workDir <> "/" <> take 2 hash
+makeFileDir workDir hash = objectsDir workDir <> "/" <> take 2 hash
 
 makeFilePath :: WorkDir -> Hash -> FilePath
-makeFilePath workDir hash = (makeFileDir workDir hash) <> "/" <> drop 2 hash
+makeFilePath workDir hash = filePath
+  where
+    fileDir = makeFileDir workDir hash
+    filePath = fileDir <> "/" <> drop 2 hash <> "/" <> drop 2 hash
 
 writeContent :: WorkDir -> Hash -> Content -> IO ()
 writeContent workDir hash content = do
@@ -70,21 +77,23 @@ writeContent workDir hash content = do
     filePath = makeFilePath workDir hash
 
 readContent :: WorkDir -> Hash -> IO (Maybe Content)
-readContent workDir hash = do
-  exists <- Directory.doesFileExist filePath
-  if exists
-    then do
+readContent workDir hash =
+  Directory.doesFileExist filePath >>= \case
+    True -> do
       content <- ByteString.readFile filePath
       return $ Just $ decompress content
-    else return Nothing
+    False -> return Nothing
   where
     filePath = makeFilePath workDir hash
 
-hashFile :: WorkDir -> Bool -> Kind -> FilePath -> IO (Either String Hash)
-hashFile workDir write kind file = do
-  fileError <- Validation.fileAccess workDir file
+validateHash :: String -> Either String Hash
+validateHash hash
+  | length hash == 40 = Right hash
+  | otherwise = Left $ "Invalid hash length: expected 40 characters, got " <> show (length hash)
 
-  case fileError of
+hashFile :: WorkDir -> Bool -> Kind -> FilePath -> IO (Either String Hash)
+hashFile workDir write kind file =
+  Validation.fileAccess workDir file >>= \case
     Nothing -> hashFile'
     Just err -> return $ Left err
   where
@@ -98,8 +107,6 @@ hashFile workDir write kind file = do
       let content = makeContent rawContent kind
           hash = hashContent content
 
-      if write
-        then do
-          writeContent workDir hash content
-          return $ Right hash
-        else return $ Right hash
+      when write $ writeContent workDir hash content
+
+      return $ Right hash

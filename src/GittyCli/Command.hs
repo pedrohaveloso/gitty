@@ -2,7 +2,7 @@ module GittyCli.Command (Available (..), parser, run) where
 
 import qualified Gitty
 import Gitty.Prelude (WorkDir)
-import qualified Gitty.Validation as Gitty.Validation
+import qualified Gitty.Validation
 import qualified GittyCli.Command.HashObject as HashObject
 import qualified GittyCli.Command.UpdateIndex as UpdateIndex
 import Options.Applicative
@@ -35,7 +35,7 @@ parser =
           )
     )
 
-needRepo :: ((WorkDir -> options -> IO ()), options) -> WorkDir -> IO ()
+needRepo :: (WorkDir -> options -> IO (), options) -> WorkDir -> IO ()
 needRepo (fn, options) workDir = do
   repoExists <- Gitty.Validation.repoExists workDir
 

@@ -7,10 +7,12 @@ import qualified System.Directory as Directory
 type ValidationError = String
 
 repoExists :: WorkDir -> IO (Maybe ValidationError)
-repoExists workDir = return Nothing
-
--- repoExists error:
--- "There is no repository in that folder."
+repoExists workDir =
+  Directory.doesDirectoryExist workDir
+    >>= \exists ->
+      if exists
+        then return Nothing
+        else return $ Just $ "There is no repository in that folder (" <> workDir <> ")."
 
 validateFileAccess :: FilePath -> Bool -> Bool -> Bool -> Maybe ValidationError
 validateFileAccess file exists readable inRepo
@@ -21,18 +23,16 @@ validateFileAccess file exists readable inRepo
 
 fileAccess :: WorkDir -> FilePath -> IO (Maybe ValidationError)
 fileAccess workDir file = do
-  exists <- Directory.doesFileExist absoluteFile
-  readable <- Directory.readable <$> Directory.getPermissions absoluteFile
+  if null file
+    then return $ Just "The file value is empty"
+    else do
+      exists <- Directory.doesFileExist absoluteFile
+      readable <- Directory.readable <$> Directory.getPermissions absoluteFile
 
-  return $ validateFileAccess file exists readable inRepo
+      return $ validateFileAccess file exists readable inRepo
   where
     absoluteFile :: String
     absoluteFile = makeAbsoluteFrom workDir file
 
     inRepo :: Bool
     inRepo = workDir `isPrefixOf` absoluteFile
-
-
-
-multipleValidations :: [IO (Maybe ValidationError)] -> Maybe ValidationError
-multipleValidations validations = undefined
