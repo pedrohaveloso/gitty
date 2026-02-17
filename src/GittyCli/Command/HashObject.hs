@@ -20,7 +20,7 @@ import Options.Applicative
 data Options = Options
   { write :: Bool,
     kind :: String,
-    file :: String
+    file :: FilePath
   }
   deriving (Show)
 

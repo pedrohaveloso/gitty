@@ -16,7 +16,7 @@ type WorkDir = FilePath
 bsToHex :: ByteString.ByteString -> String
 bsToHex = concatMap (printf "%02x") . ByteString.unpack
 
-repoDir :: FilePath -> FilePath
+repoDir :: WorkDir -> FilePath
 repoDir workDir = workDir ++ "/.gitty"
 
 makeAbsoluteFrom :: FilePath -> FilePath -> FilePath
