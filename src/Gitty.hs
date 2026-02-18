@@ -1,7 +1,7 @@
 module Gitty (fatal, msg) where
 
 fatal :: String -> IO ()
-fatal m = putStrLn $ "Fatal error:\n'" <> m <> "'"
+fatal m = putStrLn ("Fatal error:\n'" <> m <> "'")
 
 msg :: String -> IO ()
 msg = putStrLn

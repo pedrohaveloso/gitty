@@ -49,9 +49,9 @@ runSingle workDir path = do
           workDir
           Index.UpdateIndexOptions
             { object = hash,
+              add = True,
               mode = mode,
-              file = path,
-              add = True
+              file = path
             }
 
       case result of

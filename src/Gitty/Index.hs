@@ -51,7 +51,7 @@ showIndex :: Index -> ByteString.ByteString
 showIndex idx = show idx & Char8.pack
 
 makeChecksum :: Index -> String
-makeChecksum index = SHA1.hash (showIndex index) & Char8.unpack
+makeChecksum index = SHA1.hash (showIndex index {checksum = ""}) & Char8.unpack
 
 checksumIsValid :: Index -> Bool
 checksumIsValid index = index.checksum == makeChecksum index
@@ -86,6 +86,7 @@ data UpdateIndexOptions = UpdateIndexOptions
     mode :: String,
     object :: Object.Hash
   }
+  deriving (Show)
 
 updateIndex :: WorkDir -> UpdateIndexOptions -> IO (Either String ())
 updateIndex workDir options =
@@ -111,7 +112,7 @@ updateIndex workDir options =
             then
               return $
                 Left $
-                  "Cannot add " <> options.file <> " to the index, missing --add option?"
+                  "Cannot add " <> options.file <> " to the index"
             else do
               writeIndex workDir index {entries = newEntry : filtered}
               return $ Right ()

@@ -3,8 +3,8 @@ module GittyCli.Command (Available (..), parser, run) where
 import qualified Gitty
 import Gitty.Prelude (WorkDir)
 import qualified Gitty.Validation
+import qualified GittyCli.Command.Add as Add
 import qualified GittyCli.Command.HashObject as HashObject
-import qualified GittyCli.Command.UpdateIndex as Add
 import qualified GittyCli.Command.UpdateIndex as UpdateIndex
 import Options.Applicative
   ( Parser,
