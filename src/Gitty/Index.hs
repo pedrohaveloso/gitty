@@ -5,13 +5,11 @@
 
 module Gitty.Index
   ( updateIndex,
-    defaultUpdateIndexOptions,
     UpdateIndexOptions (..),
   )
 where
 
 import qualified Crypto.Hash.SHA1 as SHA1
-import Data.Bits ((.&.))
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
 import Data.Function ((&))
@@ -20,7 +18,6 @@ import qualified Gitty.Object as Object
 import Gitty.Prelude (WorkDir, makeAbsoluteFrom, repoDir)
 import qualified Gitty.Validation as Validation
 import qualified System.Directory as Directory
-import System.Posix.Files (fileMode, getFileStatus)
 import Text.Read (readMaybe)
 
 indexFile :: WorkDir -> FilePath
@@ -83,28 +80,12 @@ readIndex workDir = do
           | checksumIsValid index -> return $ Right index
           | otherwise -> return $ Left "Bad index file sha1 signature, index file corrupt"
 
-getFileMode :: FilePath -> IO String
-getFileMode filePath = do
-  status <- getFileStatus filePath
-  let rawMode = fileMode status
-      isExecutable = rawMode .&. 0o111 /= 0
-  return $ if isExecutable then "100755" else "100644"
-
 data UpdateIndexOptions = UpdateIndexOptions
   { file :: FilePath,
     add :: Bool,
-    mode :: Maybe String,
-    object :: Maybe Object.Hash
+    mode :: String,
+    object :: Object.Hash
   }
-
-defaultUpdateIndexOptions :: UpdateIndexOptions
-defaultUpdateIndexOptions =
-  UpdateIndexOptions
-    { file = "",
-      add = False,
-      mode = Nothing,
-      object = Nothing
-    }
 
 updateIndex :: WorkDir -> UpdateIndexOptions -> IO (Either String ())
 updateIndex workDir options =
@@ -113,34 +94,27 @@ updateIndex workDir options =
     Nothing -> updateIndex'
   where
     updateIndex' :: IO (Either String ())
-    updateIndex' = do
-      mode <- makeFileMode
-      hash <- case options.object of
-        Just hs -> return $ Object.validateHash hs
-        Nothing -> Object.hashFile workDir True Object.Blob options.file
-      index <- readIndex workDir
+    updateIndex' =
+      readIndex workDir >>= \case
+        Left err -> return $ Left err
+        Right index -> do
+          let newEntry =
+                Entry
+                  { mode = options.mode,
+                    path = absoluteFile,
+                    hash = options.object
+                  }
+              filtered = filter (\e -> e.path /= newEntry.path) index.entries
+              isNew = length filtered == length index.entries
 
-      case (index, hash) of
-        (Left err, _) -> return $ Left err
-        (_, Left err) -> return $ Left err
-        (Right idx, Right h) -> applyEntry idx h mode
-
-    applyEntry :: Index -> Object.Hash -> String -> IO (Either String ())
-    applyEntry index hash mode = do
-      let newEntry = Entry {mode = mode, path = absoluteFile, hash = hash}
-          filtered = filter (\e -> e.path /= newEntry.path) index.entries
-          isNew = length filtered == length index.entries
-
-      if not options.add && isNew
-        then return $ Left $ "Cannot add " <> options.file <> " to the index, missing --add option?"
-        else do
-          writeIndex workDir index {entries = newEntry : filtered}
-          return $ Right ()
+          if not options.add && isNew
+            then
+              return $
+                Left $
+                  "Cannot add " <> options.file <> " to the index, missing --add option?"
+            else do
+              writeIndex workDir index {entries = newEntry : filtered}
+              return $ Right ()
 
     absoluteFile :: String
     absoluteFile = makeAbsoluteFrom workDir options.file
-
-    makeFileMode :: IO String
-    makeFileMode = case options.mode of
-      Nothing -> getFileMode options.file
-      Just fm -> return fm

@@ -6,7 +6,7 @@
 module GittyCli.Command.UpdateIndex (Options (..), parser, run) where
 
 import qualified Gitty
-import Gitty.Index (UpdateIndexOptions (..))
+import qualified Gitty.FileSystem as FileSystem
 import qualified Gitty.Index as Index
 import qualified Gitty.Object as Object
 import Gitty.Prelude (WorkDir)
@@ -92,25 +92,48 @@ run workDir options = do
       mapM_
         ( \file ->
             runSingle
-              Index.defaultUpdateIndexOptions {add = options.add, file = file}
+              Index.UpdateIndexOptions
+                { add = options.add,
+                  file = file,
+                  mode = "",
+                  object = ""
+                }
         )
         options.files
     else
       mapM_
         ( \cacheInfo ->
             runSingle
-              Index.defaultUpdateIndexOptions
+              Index.UpdateIndexOptions
                 { add = options.add,
                   file = cacheInfo.file,
-                  mode = Just cacheInfo.mode,
-                  object = Just cacheInfo.object
+                  mode = cacheInfo.mode,
+                  object = cacheInfo.object
                 }
         )
         options.cacheInfos
   where
-    runSingle :: UpdateIndexOptions -> IO ()
-    runSingle opts =
-      Index.updateIndex workDir opts
-        >>= \case
-          Left err -> Gitty.msg err
-          Right _ -> return ()
+    runSingle :: Index.UpdateIndexOptions -> IO ()
+    runSingle opts = do
+      mode <- makeMode opts
+      hashEither <- makeHash opts
+
+      case hashEither of
+        Left err -> Gitty.fatal err
+        Right hash ->
+          Index.updateIndex workDir (opts {Index.object = hash, Index.mode = mode})
+            >>= \case
+              Left err -> Gitty.msg err
+              Right _ -> return ()
+
+    makeMode :: Index.UpdateIndexOptions -> IO String
+    makeMode opts =
+      if null opts.mode
+        then FileSystem.getFileMode opts.file
+        else return opts.mode
+
+    makeHash :: Index.UpdateIndexOptions -> IO (Either String Object.Hash)
+    makeHash opts =
+      if null opts.object
+        then Object.hashFile workDir True Object.Blob opts.file
+        else return $ Object.validateHash opts.object

@@ -4,6 +4,7 @@ import qualified Gitty
 import Gitty.Prelude (WorkDir)
 import qualified Gitty.Validation
 import qualified GittyCli.Command.HashObject as HashObject
+import qualified GittyCli.Command.UpdateIndex as Add
 import qualified GittyCli.Command.UpdateIndex as UpdateIndex
 import Options.Applicative
   ( Parser,
@@ -16,6 +17,7 @@ import Options.Applicative
 data Available
   = HashObject HashObject.Options
   | UpdateIndex UpdateIndex.Options
+  | Add Add.Options
   deriving (Show)
 
 parser :: Parser Available
@@ -33,6 +35,12 @@ parser =
               (UpdateIndex <$> UpdateIndex.parser)
               (progDesc "Register file contents in the working tree to the index")
           )
+        <> command
+          "add"
+          ( info
+              (Add <$> Add.parser)
+              (progDesc "Add file contents to the index")
+          )
     )
 
 needRepo :: (WorkDir -> options -> IO (), options) -> WorkDir -> IO ()
@@ -47,3 +55,4 @@ run :: WorkDir -> Available -> IO ()
 run workDir cmd = case cmd of
   HashObject opts -> needRepo (HashObject.run, opts) workDir
   UpdateIndex opts -> needRepo (UpdateIndex.run, opts) workDir
+  Add opts -> needRepo (Add.run, opts) workDir

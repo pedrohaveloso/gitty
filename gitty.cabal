@@ -27,12 +27,14 @@ library
   exposed-modules:
       Gitty
       Gitty.Compression
+      Gitty.FileSystem
       Gitty.Index
       Gitty.Object
       Gitty.Prelude
       Gitty.Validation
       GittyCli
       GittyCli.Command
+      GittyCli.Command.Add
       GittyCli.Command.HashObject
       GittyCli.Command.UpdateIndex
   other-modules:
