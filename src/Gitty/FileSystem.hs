@@ -16,7 +16,7 @@ getFileMode filePath = do
 getRecursiveFiles :: FilePath -> IO [FilePath]
 getRecursiveFiles topDir = do
   names <- Directory.listDirectory topDir
-  let properNames = filter (`notElem` [".", ".."]) names
+  let properNames = filter (`notElem` [".", "..", ".gitty"]) names
 
   paths <- forM properNames $ \name -> do
     let path = topDir </> name

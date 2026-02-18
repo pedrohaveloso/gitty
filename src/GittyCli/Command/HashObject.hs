@@ -6,7 +6,7 @@ module GittyCli.Command.HashObject (Options, parser, run) where
 
 import qualified Gitty
 import qualified Gitty.Object as Object
-import Gitty.Prelude (WorkDir)
+import Gitty.Prelude (WorkDir, isInsideGittyDir)
 import Options.Applicative
   ( Parser,
     argument,
@@ -51,11 +51,13 @@ parser =
       )
 
 run :: WorkDir -> Options -> IO ()
-run workDir options = do
-  result <- Object.hashFile workDir options.write kind options.file
+run workDir options
+  | isInsideGittyDir workDir options.file = return ()
+  | otherwise = do
+      result <- Object.hashFile workDir options.write kind options.file
 
-  case result of
-    Left err -> Gitty.fatal err
-    Right hash -> Gitty.msg hash
+      case result of
+        Left err -> Gitty.fatal err
+        Right hash -> Gitty.msg hash
   where
     kind = Object.kindFromString options.kind

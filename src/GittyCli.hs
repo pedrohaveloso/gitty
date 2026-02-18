@@ -13,9 +13,8 @@ import Options.Applicative
   )
 import qualified System.Directory as Directory
 
-data Options = Options
-  { command :: Command.Available
-  }
+newtype Options
+  = Options {command :: Command.Available}
   deriving (Show)
 
 optionsParser :: Parser Options

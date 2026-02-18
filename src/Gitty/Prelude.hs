@@ -3,10 +3,12 @@ module Gitty.Prelude
     bsToHex,
     repoDir,
     makeAbsoluteFrom,
+    isInsideGittyDir,
   )
 where
 
 import qualified Data.ByteString as ByteString
+import Data.List (isPrefixOf)
 import System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import Text.Printf (printf)
@@ -23,3 +25,9 @@ makeAbsoluteFrom :: FilePath -> FilePath -> FilePath
 makeAbsoluteFrom baseDir path
   | FilePath.isAbsolute path = path
   | otherwise = FilePath.normalise (baseDir </> path)
+
+isInsideGittyDir :: WorkDir -> FilePath -> Bool
+isInsideGittyDir workDir path =
+  let absPath = makeAbsoluteFrom workDir path
+      gittyPath = repoDir workDir
+   in absPath == gittyPath || (gittyPath ++ "/") `isPrefixOf` absPath

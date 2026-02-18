@@ -10,7 +10,7 @@ import qualified Gitty.FileSystem as FileSystem
 import Gitty.Index (UpdateIndexOptions (..))
 import qualified Gitty.Index as Index
 import qualified Gitty.Object as Object
-import Gitty.Prelude (WorkDir)
+import Gitty.Prelude (WorkDir, isInsideGittyDir)
 import Options.Applicative
   ( Parser,
     argument,
@@ -63,9 +63,11 @@ run workDir options = do
   mapM_ run' options.paths
   where
     run' :: FilePath -> IO ()
-    run' path =
-      Directory.doesDirectoryExist path >>= \case
-        True -> do
-          files <- FileSystem.getRecursiveFiles path
-          mapM_ (runSingle workDir) files
-        _ -> runSingle workDir path
+    run' path
+      | isInsideGittyDir workDir path = return ()
+      | otherwise =
+          Directory.doesDirectoryExist path >>= \case
+            True -> do
+              files <- FileSystem.getRecursiveFiles path
+              mapM_ (runSingle workDir) files
+            _ -> runSingle workDir path

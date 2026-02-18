@@ -9,7 +9,7 @@ import qualified Gitty
 import qualified Gitty.FileSystem as FileSystem
 import qualified Gitty.Index as Index
 import qualified Gitty.Object as Object
-import Gitty.Prelude (WorkDir)
+import Gitty.Prelude (WorkDir, isInsideGittyDir)
 import Options.Applicative
   ( Parser,
     argument,
@@ -114,17 +114,19 @@ run workDir options = do
         options.cacheInfos
   where
     runSingle :: Index.UpdateIndexOptions -> IO ()
-    runSingle opts = do
-      mode <- makeMode opts
-      hashEither <- makeHash opts
+    runSingle opts
+      | isInsideGittyDir workDir opts.file = return ()
+      | otherwise = do
+          mode <- makeMode opts
+          hashEither <- makeHash opts
 
-      case hashEither of
-        Left err -> Gitty.fatal err
-        Right hash ->
-          Index.updateIndex workDir (opts {Index.object = hash, Index.mode = mode})
-            >>= \case
-              Left err -> Gitty.msg err
-              Right _ -> return ()
+          case hashEither of
+            Left err -> Gitty.fatal err
+            Right hash ->
+              Index.updateIndex workDir (opts {Index.object = hash, Index.mode = mode})
+                >>= \case
+                  Left err -> Gitty.msg err
+                  Right _ -> return ()
 
     makeMode :: Index.UpdateIndexOptions -> IO String
     makeMode opts =
