@@ -1,23 +1,22 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.39.1.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 
 name:           gitty
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/gitty#readme>
+description:    Please see the README on GitHub at <https://github.com/pedrohaveloso/gitty#readme>
 homepage:       https://github.com/githubuser/gitty#readme
 bug-reports:    https://github.com/githubuser/gitty/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2026 Author name here
+author:         Pedro Veloso
+maintainer:     contatopedrohalves@gmail.com
+copyright:      2026 Pedro Veloso
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    CHANGELOG.md
 
 source-repository head
   type: git
@@ -35,8 +34,10 @@ library
       GittyCli
       GittyCli.Command
       GittyCli.Command.Add
+      GittyCli.Command.Commit
       GittyCli.Command.HashObject
       GittyCli.Command.UpdateIndex
+      GittyCli.Command.WriteTree
   other-modules:
       Paths_gitty
   autogen-modules:
@@ -52,6 +53,7 @@ library
     , directory >=1.3.8.5
     , filepath >=1.5.4.0
     , optparse-applicative >=0.18.1.0
+    , process >=1.6.26.1
     , split >=0.2
     , unix >=2.8
     , zlib >=0.7.1.1
@@ -75,6 +77,7 @@ executable gitty
     , filepath >=1.5.4.0
     , gitty
     , optparse-applicative >=0.18.1.0
+    , process >=1.6.26.1
     , split >=0.2
     , unix >=2.8
     , zlib >=0.7.1.1
@@ -99,6 +102,7 @@ test-suite gitty-test
     , filepath >=1.5.4.0
     , gitty
     , optparse-applicative >=0.18.1.0
+    , process >=1.6.26.1
     , split >=0.2
     , unix >=2.8
     , zlib >=0.7.1.1

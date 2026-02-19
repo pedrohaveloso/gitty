@@ -20,20 +20,15 @@ description:         Please see the README on GitHub at <https://github.com/pedr
 
 dependencies:
 - base >= 4.7 && < 5
-
 - containers >= 0.7
 - bytestring >= 0.12.2.0
 - directory >= 1.3.8.5
 - filepath >= 1.5.4.0
 - split >= 0.2
-
-# crypto
+- process >= 1.6.26.1
 - cryptohash-sha1 >= 0.11.101.0
-# compression
 - zlib >= 0.7.1.1
-# posix
 - unix >= 2.8
-# terminal commands parser
 - optparse-applicative >= 0.18.1.0
 
 ghc-options:
