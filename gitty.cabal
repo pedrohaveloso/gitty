@@ -25,19 +25,13 @@ source-repository head
 library
   exposed-modules:
       Gitty
-      Gitty.Compression
-      Gitty.FileSystem
-      Gitty.Index
-      Gitty.Object
-      Gitty.Prelude
-      Gitty.Validation
-      GittyCli
-      GittyCli.Command
-      GittyCli.Command.Add
-      GittyCli.Command.Commit
-      GittyCli.Command.HashObject
-      GittyCli.Command.UpdateIndex
-      GittyCli.Command.WriteTree
+      Gitty.Cmd
+      Gitty.Cmd.Common
+      Gitty.Cmd.HashObject
+      Gitty.Cmd.UpdateIndex
+      Gitty.Cmd.WriteTree
+      Gitty.Common
+      Gitty.Output
   other-modules:
       Paths_gitty
   autogen-modules:
