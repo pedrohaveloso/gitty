@@ -2,11 +2,15 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
-module Gitty.Cmd.HashObject (cmdHashObject, Options (..), definition) where
+module Gitty.Cmd.HashObject (cmdHashObject, definition) where
 
+import Control.Monad (when)
+import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir (..), isInsideRepoDir)
-import Gitty.Output (echo)
+import Gitty.Common (WorkDir, isInsideRepoDir, makeAbsoluteFrom)
+import qualified Gitty.Manager as Manager
+import qualified Gitty.Output as Output
+import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
 
 data Options = Options
@@ -20,13 +24,26 @@ cmdHashObject :: WorkDir -> Options -> IO ()
 cmdHashObject workDir opts
   | isInsideRepoDir workDir opts.file = return ()
   | otherwise = do
-      result <- Object.hashFile workDir opts.write kind opts.file
+      fileError <- Validation.fileAccess workDir opts.file
 
-      case result of
-        Left err -> echo err
-        Right hash -> echo hash
+      case fileError of
+        Just err -> Output.echo err
+        Nothing -> do
+          fileContent <- ByteString.readFile file
+
+          let (oid, object) = Manager.makeObject kind fileContent
+
+          when opts.write $ Manager.writeObject workDir (oid, object)
+
+          Output.echo (show oid)
+
+          return ()
   where
-    kind = Object.kindFromString opts.kind
+    kind :: Manager.ObjectKind
+    kind = Manager.objectKindFromString opts.kind
+
+    file :: FilePath
+    file = makeAbsoluteFrom workDir opts.file
 
 definition :: CmdDefinition Options
 definition =

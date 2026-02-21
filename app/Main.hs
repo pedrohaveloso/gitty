@@ -1,6 +1,6 @@
 module Main (main) where
 
-import qualified GittyCli
+import qualified Gitty
 
 main :: IO ()
-main = GittyCli.run
+main = Gitty.cli
