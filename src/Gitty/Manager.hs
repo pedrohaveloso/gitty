@@ -20,6 +20,7 @@ module Gitty.Manager
     insertIdxEntry,
     TreeStruct (..),
     mountTreeStructFromIdx,
+    deserializeTreeEntries,
     writeTreeObj,
     readTreeObj,
   )
@@ -165,12 +166,11 @@ deserializeIdx rawObj = do
     deserializeEntry :: ByteString.ByteString -> Maybe IdxEntry
     deserializeEntry line =
       case Char8.split ';' line of
-        [rawMode, rawOid, rawPath] -> do
-          oid <- readMaybe (Char8.unpack rawOid)
+        [rawMode, rawOid, rawPath] ->
           Just
             IdxEntry
               { mode = Char8.unpack rawMode,
-                oid = oid,
+                oid = ObjId (Char8.unpack rawOid),
                 path = Char8.unpack rawPath
               }
         _ -> Nothing

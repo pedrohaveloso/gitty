@@ -6,6 +6,7 @@
 module Gitty.Cmd (run) where
 
 import Control.Monad (join)
+import qualified Gitty.Cmd.CatFile as Cmd.CatFile
 import Gitty.Cmd.Common (CmdDefinition (..))
 import qualified Gitty.Cmd.HashObject as Cmd.HashObject
 import qualified Gitty.Cmd.Init as Cmd.Init
@@ -19,7 +20,8 @@ data Command = forall opts. Command (CmdDefinition opts) (WorkDir -> opts -> IO 
 
 commands :: [Command]
 commands =
-  [ Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
+  [ Command Cmd.CatFile.definition Cmd.CatFile.cmdCatFile,
+    Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
     Command Cmd.Init.definition Cmd.Init.cmdInit,
     Command Cmd.UpdateIndex.definition Cmd.UpdateIndex.cmdUpdateIndex,
     Command Cmd.WriteTree.definition Cmd.WriteTree.cmdWriteTree
