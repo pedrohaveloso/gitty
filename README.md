@@ -2,7 +2,7 @@
 
 Em desenvolvimento... Comandos suportados atualmente:
 
-```bash
+```txt
 gitty
   - init
   - hash-object [-w, --write] [-k, --kind <kind>] <file>
