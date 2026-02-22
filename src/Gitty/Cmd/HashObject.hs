@@ -30,17 +30,15 @@ cmdHashObject workDir opts
         Just err -> Output.echo err
         Nothing -> do
           fileContent <- ByteString.readFile file
+          let (oid, object) = Manager.makeObj kind fileContent
 
-          let (oid, object) = Manager.makeObject kind fileContent
-
-          when opts.write $ Manager.writeObject workDir (oid, object)
+          when opts.write $ Manager.writeObj workDir (oid, object)
 
           Output.echo (show oid)
-
           return ()
   where
-    kind :: Manager.ObjectKind
-    kind = Manager.objectKindFromString opts.kind
+    kind :: Manager.ObjKind
+    kind = Manager.objKindFromString opts.kind
 
     file :: FilePath
     file = makeAbsoluteFrom workDir opts.file

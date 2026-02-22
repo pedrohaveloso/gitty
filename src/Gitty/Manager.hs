@@ -1,17 +1,23 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Gitty.Manager
-  ( Object (..),
-    ObjectId (..),
-    ObjectKind (..),
-    objectKindFromString,
-    makeObject,
-    writeObject,
-    readObject,
+  ( Obj (..),
+    ObjId (..),
+    ObjKind (..),
+    objKindFromString,
+    validateObjId,
+    makeObj,
+    writeObj,
+    readObj,
+    Idx (..),
+    IdxEntry (..),
+    readIdx,
+    writeIdx,
+    idxEntryExists,
+    insertIdxEntry,
   )
 where
 
@@ -25,42 +31,42 @@ import qualified System.Directory as Directory
 import System.FilePath ((</>))
 import Text.Read (readMaybe)
 
-newtype ObjectId = ObjectId String
-  deriving (Read)
+newtype ObjId = ObjId String
+  deriving (Read, Eq)
 
-instance Show ObjectId where
-  show :: ObjectId -> String
-  show (ObjectId oid) = oid
+instance Show ObjId where
+  show :: ObjId -> String
+  show (ObjId oid) = oid
 
-data ObjectKind = Blob | Commit | Tree | Tag
+data ObjKind = ObjBlob | ObjCommit | ObjTree | ObjTag
   deriving (Show, Read)
 
-objectKindFromString :: String -> ObjectKind
-objectKindFromString raw
-  | kind == "commit" = Commit
-  | kind == "tree" = Tree
-  | kind == "tag" = Tag
-  | otherwise = Blob
+objKindFromString :: String -> ObjKind
+objKindFromString raw
+  | kind == "commit" = ObjCommit
+  | kind == "tree" = ObjTree
+  | kind == "tag" = ObjTag
+  | otherwise = ObjBlob
   where
     kind = map toLower raw
 
-data Object = Object
-  { kind :: ObjectKind,
+data Obj = Obj
+  { kind :: ObjKind,
     len :: Int,
     content :: ByteString.ByteString
   }
 
-type ObjectRawContent = ByteString.ByteString
+type ObjRawContent = ByteString.ByteString
 
-serializeObject :: Object -> ByteString.ByteString
-serializeObject object = header <> object.content
+serializeObj :: Obj -> ByteString.ByteString
+serializeObj obj = header <> obj.content
   where
     header :: ByteString.ByteString
-    header = Char8.pack (show object.kind <> " " <> show object.len <> "\0")
+    header = Char8.pack (show obj.kind <> " " <> show obj.len <> "\0")
 
-deserializeObject :: ByteString.ByteString -> Maybe Object
-deserializeObject rawObject = do
-  let (header, rest) = ByteString.break (== 0) rawObject
+deserializeObj :: ByteString.ByteString -> Maybe Obj
+deserializeObj rawObj = do
+  let (header, rest) = ByteString.break (== 0) rawObj
 
   content <-
     if ByteString.null rest
@@ -72,146 +78,119 @@ deserializeObject rawObject = do
   kind <- readMaybe rawKind
   len <- readMaybe $ dropWhile (== ' ') rawLength
 
-  Just Object {kind = kind, len = len, content = content}
+  Just Obj {kind = kind, len = len, content = content}
 
-makeObject :: ObjectKind -> ObjectRawContent -> (ObjectId, Object)
-makeObject kind rawContent = (oid, object)
+validateObjId :: ObjId -> Either String ObjId
+validateObjId (ObjId oid)
+  | length oid == 40 = Right $ ObjId oid
+  | otherwise =
+      Left $
+        "Invalid object hash length: expected 40 characters, got " <> show (length oid)
+
+makeObj :: ObjKind -> ObjRawContent -> (ObjId, Obj)
+makeObj kind rawContent = (oid, obj)
   where
-    object :: Object
-    object =
-      Object
+    obj :: Obj
+    obj =
+      Obj
         { kind = kind,
           len = ByteString.length rawContent,
           content = rawContent
         }
 
-    oid :: ObjectId
-    oid = ObjectId (object & serializeObject & SHA1.hash & byteStringToHex)
+    oid :: ObjId
+    oid = ObjId (obj & serializeObj & SHA1.hash & byteStringToHex)
 
-writeObject :: WorkDir -> (ObjectId, Object) -> IO ()
-writeObject workDir (ObjectId oid, object) =
+writeObj :: WorkDir -> (ObjId, Obj) -> IO ()
+writeObj workDir (ObjId oid, obj) =
   Directory.createDirectoryIfMissing True fileDir
     >> ByteString.writeFile filePath content
   where
-    content = object & serializeObject & compress
+    content = obj & serializeObj & compress
     fileDir = makeRepoDir workDir </> "/objects/" </> take 2 oid
     filePath = fileDir </> "/" </> drop 2 oid
 
-readObject :: WorkDir -> ObjectId -> IO (Maybe Object)
-readObject workDir (ObjectId oid) = do
+readObj :: WorkDir -> ObjId -> IO (Maybe Obj)
+readObj workDir (ObjId oid) = do
   exists <- Directory.doesFileExist filePath
 
   if exists
     then do
       content <- ByteString.readFile filePath
-      return $ deserializeObject $ decompress content
+      return $ deserializeObj $ decompress content
     else return Nothing
   where
     fileDir = makeRepoDir workDir </> "/objects/" </> take 2 oid
     filePath = fileDir </> "/" </> drop 2 oid
 
-data IndexEntry = IndexEntry
+data IdxEntry = IdxEntry
   { mode :: String,
-    oid :: ObjectId,
+    oid :: ObjId,
     path :: FilePath
   }
   deriving (Eq)
 
-instance Ord IndexEntry where
+instance Ord IdxEntry where
+  compare :: IdxEntry -> IdxEntry -> Ordering
   compare e1 e2 = compare e1.path e2.path
 
-newtype Index = Index {entries :: [IndexEntry]}
+newtype Idx = Idx {entries :: [IdxEntry]}
 
-defaultIndex :: Index
-defaultIndex = Index {entries = []}
+defaultIdx :: Idx
+defaultIdx = Idx {entries = []}
 
-serializeIndex :: Index -> ByteString.ByteString
-serializeIndex index =
-  map serializeEntry index.entries
+serializeIdx :: Idx -> ByteString.ByteString
+serializeIdx idx =
+  map serializeEntry idx.entries
     & ByteString.intercalate (Char8.pack "\n")
   where
-    serializeEntry :: IndexEntry -> ByteString.ByteString
+    serializeEntry :: IdxEntry -> ByteString.ByteString
     serializeEntry entry =
       Char8.pack (entry.mode <> ";" <> show entry.oid <> ";" <> entry.path)
 
-deserializeIndex :: ByteString.ByteString -> Maybe Index
-deserializeIndex rawObject = do
-  entries <- mapM deserializeEntry (Char8.lines rawObject)
-  Just Index {entries = entries}
+deserializeIdx :: ByteString.ByteString -> Maybe Idx
+deserializeIdx rawObj = do
+  entries <- mapM deserializeEntry (Char8.lines rawObj)
+  Just Idx {entries = entries}
   where
-    deserializeEntry :: ByteString.ByteString -> Maybe IndexEntry
+    deserializeEntry :: ByteString.ByteString -> Maybe IdxEntry
     deserializeEntry line =
       case Char8.split ';' line of
         [rawMode, rawOid, rawPath] -> do
           oid <- readMaybe (Char8.unpack rawOid)
           Just
-            IndexEntry
+            IdxEntry
               { mode = Char8.unpack rawMode,
                 oid = oid,
                 path = Char8.unpack rawPath
               }
         _ -> Nothing
 
-writeIndex :: WorkDir -> Index -> IO ()
-writeIndex workDir index =
-  index
-    & serializeIndex
+writeIdx :: WorkDir -> Idx -> IO ()
+writeIdx workDir idx =
+  idx
+    & serializeIdx
     & compress
     & ByteString.writeFile (makeRepoDir workDir </> "/index")
 
-readIndex :: WorkDir -> IO (Either String Index)
-readIndex workDir = do
+readIdx :: WorkDir -> IO Idx
+readIdx workDir = do
   exists <- Directory.doesFileExist (makeRepoDir workDir </> "/index")
 
-  if exists then readIndex' else return $ Right defaultIndex
+  if exists
+    then do
+      compressed <- ByteString.readFile (makeRepoDir workDir </> "/index")
+
+      case deserializeIdx (decompress compressed) of
+        Nothing -> return defaultIdx
+        Just idx -> return idx
+    else return defaultIdx
+
+idxEntryExists :: Idx -> FilePath -> Bool
+idxEntryExists idx path = any (\entry -> entry.path == path) idx.entries
+
+insertIdxEntry :: Idx -> IdxEntry -> Idx
+insertIdxEntry idx entry =
+  idx {entries = entry : filtered}
   where
-    readIndex' :: IO (Either String Index)
-    readIndex' = do
-      compressed <- ByteString.readFile (indexFile workDir)
-      let content = decompress compressed & Char8.unpack
-
-      case readMaybe content of
-        Nothing -> return $ Left "Invalid index file"
-        Just index
-          | checksumIsValid index -> return $ Right index
-          | otherwise -> return $ Left "Bad index file sha1 signature, index file corrupt"
-
-data UpdateIndexOptions = UpdateIndexOptions
-  { file :: FilePath,
-    add :: Bool,
-    mode :: String,
-    oid :: ObjectId
-  }
-  deriving (Show)
-
-updateIndex :: WorkDir -> UpdateIndexOptions -> IO (Either String ())
-updateIndex workDir options =
-  Validation.fileAccess workDir options.file >>= \case
-    Just err -> return $ Left err
-    Nothing -> updateIndex'
-  where
-    updateIndex' :: IO (Either String ())
-    updateIndex' =
-      readIndex workDir >>= \case
-        Left err -> return $ Left err
-        Right index -> do
-          let newIndexEntry =
-                IndexEntry
-                  { mode = options.mode,
-                    path = absoluteFile,
-                    oid = options.object
-                  }
-              filtered = filter (\e -> e.path /= newIndexEntry.path) index.entries
-              isNew = length filtered == length index.entries
-
-          if not options.add && isNew
-            then
-              return $
-                Left $
-                  "Cannot add " <> options.file <> " to the index"
-            else do
-              writeIndex workDir index {entries = newIndexEntry : filtered}
-              return $ Right ()
-
-    absoluteFile :: String
-    absoluteFile = makeAbsoluteFrom workDir options.file
+    filtered = filter ((/= entry.path) . (.path)) idx.entries
