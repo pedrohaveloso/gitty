@@ -8,7 +8,7 @@ module Gitty.Cmd.UpdateIndex (cmdUpdateIndex, Options (..), definition) where
 import Control.Monad (when)
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom, needRepo)
+import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom, makeRelativeTo, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
@@ -28,10 +28,10 @@ data Options = Options
   deriving (Show)
 
 cmdUpdateIndex :: WorkDir -> Options -> IO ()
-cmdUpdateIndex workDir opts = needRepo workDir cmdUpdateIndex'
+cmdUpdateIndex workDir opts = needRepo workDir updateIndex
   where
-    cmdUpdateIndex' :: IO ()
-    cmdUpdateIndex' =
+    updateIndex :: IO ()
+    updateIndex =
       let args =
             if null opts.cacheInfos
               then map (,Nothing,Nothing) opts.files
@@ -64,7 +64,11 @@ processFile workDir add (file, mode, oid)
                 Manager.writeIdx workDir $
                   Manager.insertIdxEntry
                     idx
-                    Manager.IdxEntry {mode = mode', oid = oid', path = absFile}
+                    Manager.IdxEntry
+                      { mode = mode',
+                        oid = oid',
+                        path = makeRelativeTo workDir absFile
+                      }
   where
     makeOid :: FilePath -> IO (Either String Manager.ObjId)
     makeOid absFile = case oid of

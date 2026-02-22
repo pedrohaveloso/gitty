@@ -4,11 +4,13 @@ module Gitty.Common
     makeRepoDir,
     isInsideRepoDir,
     makeAbsoluteFrom,
+    makeRelativeTo,
     getFileMode,
     getRecursiveFiles,
     compress,
     decompress,
     byteStringToHex,
+    hexToByteString,
     needRepo,
   )
 where
@@ -21,8 +23,9 @@ import Data.Function ((&))
 import Data.List (isPrefixOf)
 import System.Directory (doesDirectoryExist, listDirectory)
 import qualified System.Directory as Directory
-import System.FilePath (isAbsolute, normalise, (</>))
+import System.FilePath (isAbsolute, makeRelative, normalise, (</>))
 import System.Posix (fileMode, getFileStatus)
+import Data.Char (digitToInt)
 import Text.Printf (printf)
 
 type WorkDir = FilePath
@@ -36,6 +39,9 @@ makeAbsoluteFrom :: FilePath -> FilePath -> FilePath
 makeAbsoluteFrom baseDir path
   | isAbsolute path = path
   | otherwise = normalise (baseDir </> path)
+
+makeRelativeTo :: FilePath -> FilePath -> FilePath
+makeRelativeTo baseDir path = makeRelative (normalise baseDir) (normalise path)
 
 isInsideRepoDir :: WorkDir -> FilePath -> Bool
 isInsideRepoDir workDir path =
@@ -75,6 +81,12 @@ decompress bs = bs & ByteString.fromStrict & Zlib.decompress & ByteString.toStri
 
 byteStringToHex :: ByteString.ByteString -> String
 byteStringToHex = concatMap (printf "%02x") . ByteString.unpack
+
+hexToByteString :: String -> ByteString.ByteString
+hexToByteString = ByteString.pack . pairs
+  where
+    pairs (a : b : rest) = fromIntegral (digitToInt a * 16 + digitToInt b) : pairs rest
+    pairs _ = []
 
 needRepo :: WorkDir -> IO () -> IO ()
 needRepo workDir fn = do

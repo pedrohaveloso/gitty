@@ -18,17 +18,25 @@ module Gitty.Manager
     writeIdx,
     idxEntryExists,
     insertIdxEntry,
+    TreeStruct (..),
+    mountTreeStructFromIdx,
+    writeTreeObj,
+    readTreeObj,
   )
 where
 
+import Control.Monad (guard, unless)
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
 import Data.Char (toLower)
+import Data.Either (partitionEithers)
 import Data.Function ((&))
-import Gitty.Common (WorkDir, byteStringToHex, compress, decompress, makeRepoDir)
+import qualified Data.Map as Map
+import Gitty.Common (WorkDir, byteStringToHex, compress, decompress, hexToByteString, makeRepoDir)
 import qualified System.Directory as Directory
 import System.FilePath ((</>))
+import qualified System.FilePath as FilePath
 import Text.Read (readMaybe)
 
 newtype ObjId = ObjId String
@@ -102,9 +110,10 @@ makeObj kind rawContent = (oid, obj)
     oid = ObjId (obj & serializeObj & SHA1.hash & byteStringToHex)
 
 writeObj :: WorkDir -> (ObjId, Obj) -> IO ()
-writeObj workDir (ObjId oid, obj) =
+writeObj workDir (ObjId oid, obj) = do
   Directory.createDirectoryIfMissing True fileDir
-    >> ByteString.writeFile filePath content
+  exists <- Directory.doesFileExist filePath
+  unless exists $ ByteString.writeFile filePath content
   where
     content = obj & serializeObj & compress
     fileDir = makeRepoDir workDir </> "objects" </> take 2 oid
@@ -194,3 +203,105 @@ insertIdxEntry idx entry =
   idx {entries = entry : filtered}
   where
     filtered = filter ((/= entry.path) . (.path)) idx.entries
+
+data TreeStruct
+  = TreeStruct FilePath [TreeStruct]
+  | TreeEntry IdxEntry
+
+mountTreeStructFromIdx :: Idx -> TreeStruct
+mountTreeStructFromIdx idx = TreeStruct "." (mountTreeStructFromIdx' idx.entries)
+  where
+    mountTreeStructFromIdx' :: [IdxEntry] -> [TreeStruct]
+    mountTreeStructFromIdx' entries = do
+      let (files, dirs) = partitionEithers $ map classify entries
+
+          groupedDirs =
+            Map.fromListWith
+              (++)
+              [(dir, [entry]) | (dir, entry) <- dirs]
+
+          dirNodes =
+            [ TreeStruct
+                dir
+                (mountTreeStructFromIdx' es)
+            | (dir, es) <- Map.toList groupedDirs
+            ]
+
+          fileNodes = map TreeEntry files
+
+      fileNodes ++ dirNodes
+
+    classify :: IdxEntry -> Either IdxEntry (FilePath, IdxEntry)
+    classify entry = case FilePath.splitDirectories entry.path of
+      [_] -> Left entry
+      (dir : rest) -> Right (dir, entry {path = FilePath.joinPath rest})
+      _ -> Left entry
+
+serializeTreeEntry :: (String, FilePath, ObjId) -> ByteString.ByteString
+serializeTreeEntry (mode, entryName, ObjId hex) =
+  Char8.pack (mode <> " " <> entryName <> "\0") <> hexToByteString hex
+
+deserializeTreeEntries :: ByteString.ByteString -> Maybe [(String, FilePath, ObjId)]
+deserializeTreeEntries bs
+  | ByteString.null bs = Just []
+  | otherwise = do
+      let (rawMode, restA) = Char8.break (== ' ') bs
+      guard (not $ ByteString.null restA)
+
+      let (rawName, restB) = ByteString.break (== 0) (ByteString.drop 1 restA)
+      guard (not $ ByteString.null restB)
+
+      let (rawOid, restC) = ByteString.splitAt 20 (ByteString.drop 1 restB)
+      guard (ByteString.length rawOid == 20)
+
+      remaining <- deserializeTreeEntries restC
+
+      Just
+        ( ( Char8.unpack rawMode,
+            Char8.unpack rawName,
+            ObjId (byteStringToHex rawOid)
+          )
+            : remaining
+        )
+
+makeTreeObj :: [(String, FilePath, ObjId)] -> (ObjId, Obj)
+makeTreeObj entries = makeObj ObjTree content
+  where
+    content = ByteString.concat $ map serializeTreeEntry entries
+
+writeTreeObj :: WorkDir -> TreeStruct -> IO ObjId
+writeTreeObj _ (TreeEntry entry) = return entry.oid
+writeTreeObj workDir (TreeStruct _ children) = do
+  entries <- mapM (resolveChild workDir) children
+  let treeObj = makeTreeObj entries
+  writeObj workDir treeObj
+
+  return $ fst treeObj
+  where
+    resolveChild :: WorkDir -> TreeStruct -> IO (String, FilePath, ObjId)
+    resolveChild _ (TreeEntry entry) = return (entry.mode, entry.path, entry.oid)
+    resolveChild wd tree@(TreeStruct dirName _) = do
+      treeOid <- writeTreeObj wd tree
+      return ("40000", dirName, treeOid)
+
+readTreeObj :: WorkDir -> ObjId -> IO (Maybe TreeStruct)
+readTreeObj workDir rootOid = do
+  maybeObj <- readObj workDir rootOid
+
+  case maybeObj >>= \obj -> deserializeTreeEntries obj.content of
+    Nothing -> return Nothing
+    Just entries -> do
+      children <- mapM resolveEntry entries
+      return $ Just $ TreeStruct "." children
+  where
+    resolveEntry :: (String, FilePath, ObjId) -> IO TreeStruct
+    resolveEntry ("40000", entryName, entryOid) = do
+      maybeObj <- readObj workDir entryOid
+
+      case maybeObj >>= \obj -> deserializeTreeEntries obj.content of
+        Nothing -> return $ TreeStruct entryName []
+        Just subEntries -> do
+          children <- mapM resolveEntry subEntries
+          return $ TreeStruct entryName children
+    resolveEntry (entryMode, entryName, entryOid) =
+      return $ TreeEntry IdxEntry {mode = entryMode, oid = entryOid, path = entryName}

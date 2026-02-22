@@ -20,10 +20,10 @@ data Options = Options
   deriving (Show)
 
 cmdHashObject :: WorkDir -> Options -> IO ()
-cmdHashObject workDir opts = needRepo workDir cmdHashObject'
+cmdHashObject workDir opts = needRepo workDir hashObject
   where
-    cmdHashObject' :: IO ()
-    cmdHashObject'
+    hashObject :: IO ()
+    hashObject
       | isInsideRepoDir workDir opts.file = return ()
       | otherwise = do
           fileError <- Validation.fileAccess workDir opts.file
