@@ -3,6 +3,7 @@ module Gitty.Cmd.Init (cmdInit, definition) where
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common (WorkDir, makeRepoDir)
 import qualified System.Directory as Directory
+import System.FilePath ((</>))
 
 cmdInit :: WorkDir -> () -> IO ()
 cmdInit workDir _ = do
@@ -10,7 +11,10 @@ cmdInit workDir _ = do
 
   if exists
     then return ()
-    else Directory.createDirectory repoDir
+    else do
+      Directory.createDirectory repoDir
+      Directory.createDirectoryIfMissing True $ repoDir </> "refs/heads"
+      writeFile (repoDir </> "head") "refs/heads/main"
   where
     repoDir = makeRepoDir workDir
 
@@ -18,6 +22,6 @@ definition :: CmdDefinition ()
 definition =
   CmdDefinition
     { name = "init",
-      description = "Create an empty Git repository",
+      description = "Create an empty repository",
       parser = pure ()
     }
