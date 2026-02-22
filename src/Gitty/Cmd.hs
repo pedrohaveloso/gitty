@@ -44,33 +44,3 @@ run = do
             <> Cli.progDesc "Pseudo-Git implementation in Haskell"
             <> Cli.header "Gitty"
         )
-
--- needRepo :: (WorkDir -> options -> IO (), options) -> WorkDir -> IO ()
--- needRepo (fn, options) workDir = do
---   repoExists <- Gitty.Validation.repoExists workDir
-
---   case repoExists of
---     Nothing -> fn workDir options
---     Just err -> Gitty.fatal err
-
--- run :: WorkDir -> Available -> IO ()
--- run workDir cmd = case cmd of
---   HashObject opts -> needRepo (HashObject.run, opts) workDir
---   UpdateIndex opts ->
---     needRepo (UpdateIndex.run, opts) workDir
---   Add opts -> needRepo (Add.run, opts) workDir
-
--- module GittyCli (run) where
-
--- import qualified GittyCli.Available as Available
--- import Options.Applicative
---   ( Parser,
---     execParser,
---     fullDesc,
---     header,
---     helper,
---     info,
---     progDesc,
---     (<**>),
---   )
--- import qualified System.Directory as Directory
