@@ -1,14 +1,14 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
 module Gitty.Cmd.UpdateIndex (cmdUpdateIndex, Options (..), definition) where
 
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom)
+import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom, needRepo)
 import qualified Gitty.Manager as Manager
-import qualified Gitty.Output as Output
 import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
 
@@ -27,53 +27,60 @@ data Options = Options
   deriving (Show)
 
 cmdUpdateIndex :: WorkDir -> Options -> IO ()
-cmdUpdateIndex workDir opts =
-  if null opts.cacheInfos
-    then mapM_ (\file -> runSingle file Nothing Nothing) opts.files
-    else mapM_ (\ci -> runSingle ci.file (Just ci.mode) (Just ci.oid)) opts.cacheInfos
+cmdUpdateIndex workDir opts = needRepo workDir cmdUpdateIndex'
   where
-    runSingle :: FilePath -> Maybe String -> Maybe String -> IO ()
-    runSingle file mode oid
-      | isInsideRepoDir workDir file = return ()
-      | otherwise = do
-          fileError <- Validation.fileAccess workDir file
+    cmdUpdateIndex' =
+      let args =
+            if null opts.cacheInfos
+              then map (,Nothing,Nothing) opts.files
+              else map (\ci -> (ci.file, Just ci.mode, Just ci.oid)) opts.cacheInfos
+       in mapM_
+            (\(file, mode, oid) -> processFile workDir (opts.add, file, mode, oid))
+            args
 
-          case fileError of
-            Just err -> Output.echo err
-            Nothing -> do
-              let file' = makeAbsoluteFrom workDir file
-              idx <- Manager.readIdx workDir
-              let exists = Manager.idxEntryExists idx file'
+processFile :: WorkDir -> (Bool, FilePath, Maybe String, Maybe String) -> IO ()
+processFile workDir (add, file, mode, oid)
+  | isInsideRepoDir workDir file = return ()
+  | otherwise = do
+      fileError <- Validation.fileAccess workDir file
 
-              if not opts.add && not exists
-                then Output.echo $ "Cannot add " <> file <> " to the index"
-                else do
-                  mode <- makeMode mode file'
-                  hashEither <- makeOid oid file'
+      case fileError of
+        Just err -> putStrLn err
+        Nothing -> do
+          idx <- Manager.readIdx workDir
+          let exists = Manager.idxEntryExists idx makeFile
 
-                  case hashEither of
-                    Left err -> Output.echo err
-                    Right oid -> do
-                      let entry =
-                            Manager.IdxEntry
-                              { mode = mode,
-                                oid = oid,
-                                path = file'
-                              }
+          if not add && not exists
+            then putStrLn $ "Cannot add " <> file <> " to the index"
+            else do
+              mode' <- makeMode
+              oidEither <- makeOid
 
-                      let idx = Manager.insertIdxEntry idx entry
-                      Manager.writeIdx workDir idx
+              case oidEither of
+                Left err -> putStrLn err
+                Right oid' -> do
+                  let entry =
+                        Manager.IdxEntry
+                          { mode = mode',
+                            oid = oid',
+                            path = makeFile
+                          }
 
-    makeMode :: Maybe String -> FilePath -> IO String
-    makeMode mode file =
+                  Manager.writeIdx workDir (Manager.insertIdxEntry idx entry)
+  where
+    makeFile :: FilePath
+    makeFile = makeAbsoluteFrom workDir file
+
+    makeMode :: IO String
+    makeMode =
       case mode of
-        Nothing -> getFileMode file
+        Nothing -> getFileMode makeFile
         Just mode' -> return mode'
 
-    makeOid :: Maybe String -> FilePath -> IO (Either String Manager.ObjId)
-    makeOid oid file = case oid of
+    makeOid :: IO (Either String Manager.ObjId)
+    makeOid = case oid of
       Nothing -> do
-        content <- ByteString.readFile file
+        content <- ByteString.readFile makeFile
         let (oid', obj) = Manager.makeObj Manager.ObjBlob content
         Manager.writeObj workDir (oid', obj)
         return $ Right oid'

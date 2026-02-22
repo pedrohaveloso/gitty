@@ -7,9 +7,8 @@ module Gitty.Cmd.HashObject (cmdHashObject, definition) where
 import Control.Monad (when)
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, isInsideRepoDir, makeAbsoluteFrom)
+import Gitty.Common (WorkDir, isInsideRepoDir, makeAbsoluteFrom, needRepo)
 import qualified Gitty.Manager as Manager
-import qualified Gitty.Output as Output
 import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
 
@@ -21,22 +20,24 @@ data Options = Options
   deriving (Show)
 
 cmdHashObject :: WorkDir -> Options -> IO ()
-cmdHashObject workDir opts
-  | isInsideRepoDir workDir opts.file = return ()
-  | otherwise = do
-      fileError <- Validation.fileAccess workDir opts.file
-
-      case fileError of
-        Just err -> Output.echo err
-        Nothing -> do
-          fileContent <- ByteString.readFile file
-          let (oid, object) = Manager.makeObj kind fileContent
-
-          when opts.write $ Manager.writeObj workDir (oid, object)
-
-          Output.echo (show oid)
-          return ()
+cmdHashObject workDir opts = needRepo workDir cmdHashObject'
   where
+    cmdHashObject'
+      | isInsideRepoDir workDir opts.file = return ()
+      | otherwise = do
+          fileError <- Validation.fileAccess workDir opts.file
+
+          case fileError of
+            Just err -> putStrLn err
+            Nothing -> do
+              fileContent <- ByteString.readFile file
+              let (oid, object) = Manager.makeObj kind fileContent
+
+              when opts.write $ Manager.writeObj workDir (oid, object)
+
+              print oid
+              return ()
+
     kind :: Manager.ObjKind
     kind = Manager.objKindFromString opts.kind
 

@@ -9,6 +9,7 @@ module Gitty.Common
     compress,
     decompress,
     byteStringToHex,
+    needRepo,
   )
 where
 
@@ -19,6 +20,7 @@ import qualified Data.ByteString as ByteString
 import Data.Function ((&))
 import Data.List (isPrefixOf)
 import System.Directory (doesDirectoryExist, listDirectory)
+import qualified System.Directory as Directory
 import System.FilePath (isAbsolute, normalise, (</>))
 import System.Posix (fileMode, getFileStatus)
 import Text.Printf (printf)
@@ -73,3 +75,18 @@ decompress bs = bs & ByteString.fromStrict & Zlib.decompress & ByteString.toStri
 
 byteStringToHex :: ByteString.ByteString -> String
 byteStringToHex = concatMap (printf "%02x") . ByteString.unpack
+
+needRepo :: WorkDir -> IO () -> IO ()
+needRepo workDir fn = do
+  exists <- repoExists
+  maybe fn putStrLn exists
+  where
+    repoExists :: IO (Maybe String)
+    repoExists = do
+      let repoDir = makeRepoDir workDir
+
+      exists <- Directory.doesDirectoryExist repoDir
+
+      if exists
+        then return Nothing
+        else return $ Just $ "There is no repository in that folder (" <> workDir <> ")."

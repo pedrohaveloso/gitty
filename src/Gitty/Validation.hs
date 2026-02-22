@@ -1,20 +1,10 @@
-module Gitty.Validation (repoExists, fileAccess) where
+module Gitty.Validation (fileAccess) where
 
 import Data.List (isPrefixOf)
-import Gitty.Common (WorkDir, makeAbsoluteFrom, makeRepoDir)
+import Gitty.Common (WorkDir, makeAbsoluteFrom)
 import qualified System.Directory as Directory
 
 type ValidationError = String
-
-repoExists :: WorkDir -> IO (Maybe ValidationError)
-repoExists workDir = do
-  let repoDir = makeRepoDir workDir
-
-  exists <- Directory.doesDirectoryExist repoDir
-
-  if exists
-    then return Nothing
-    else return $ Just $ "There is no repository in that folder (" <> workDir <> ")."
 
 validateFileAccess :: FilePath -> Bool -> Bool -> Bool -> Maybe ValidationError
 validateFileAccess file exists readable inRepo
