@@ -40,7 +40,7 @@ makeAbsoluteFrom baseDir path
 isInsideRepoDir :: WorkDir -> FilePath -> Bool
 isInsideRepoDir workDir path =
   absolute == path
-    || (repoDir </> "/") `isPrefixOf` absolute
+    || repoDir `isPrefixOf` absolute
   where
     repoDir = makeRepoDir workDir
     absolute = makeAbsoluteFrom workDir path

@@ -107,8 +107,8 @@ writeObj workDir (ObjId oid, obj) =
     >> ByteString.writeFile filePath content
   where
     content = obj & serializeObj & compress
-    fileDir = makeRepoDir workDir </> "/objects/" </> take 2 oid
-    filePath = fileDir </> "/" </> drop 2 oid
+    fileDir = makeRepoDir workDir </> "objects" </> take 2 oid
+    filePath = fileDir </> drop 2 oid
 
 readObj :: WorkDir -> ObjId -> IO (Maybe Obj)
 readObj workDir (ObjId oid) = do
@@ -120,8 +120,8 @@ readObj workDir (ObjId oid) = do
       return $ deserializeObj $ decompress content
     else return Nothing
   where
-    fileDir = makeRepoDir workDir </> "/objects/" </> take 2 oid
-    filePath = fileDir </> "/" </> drop 2 oid
+    fileDir = makeRepoDir workDir </> "objects" </> take 2 oid
+    filePath = fileDir </> drop 2 oid
 
 data IdxEntry = IdxEntry
   { mode :: String,
@@ -171,15 +171,15 @@ writeIdx workDir idx =
   idx
     & serializeIdx
     & compress
-    & ByteString.writeFile (makeRepoDir workDir </> "/index")
+    & ByteString.writeFile (makeRepoDir workDir </> "index")
 
 readIdx :: WorkDir -> IO Idx
 readIdx workDir = do
-  exists <- Directory.doesFileExist (makeRepoDir workDir </> "/index")
+  exists <- Directory.doesFileExist (makeRepoDir workDir </> "index")
 
   if exists
     then do
-      compressed <- ByteString.readFile (makeRepoDir workDir </> "/index")
+      compressed <- ByteString.readFile (makeRepoDir workDir </> "index")
 
       case deserializeIdx (decompress compressed) of
         Nothing -> return defaultIdx
