@@ -19,13 +19,13 @@ import qualified Codec.Compression.Zlib as Zlib
 import Control.Monad (forM)
 import Data.Bits ((.&.))
 import qualified Data.ByteString as ByteString
+import Data.Char (digitToInt)
 import Data.Function ((&))
 import Data.List (isPrefixOf)
 import System.Directory (doesDirectoryExist, listDirectory)
 import qualified System.Directory as Directory
 import System.FilePath (isAbsolute, makeRelative, normalise, (</>))
 import System.Posix (fileMode, getFileStatus)
-import Data.Char (digitToInt)
 import Text.Printf (printf)
 
 type WorkDir = FilePath

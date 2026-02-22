@@ -26,6 +26,7 @@ library
   exposed-modules:
       Gitty
       Gitty.Cmd
+      Gitty.Cmd.Add
       Gitty.Cmd.CatFile
       Gitty.Cmd.Common
       Gitty.Cmd.HashObject
