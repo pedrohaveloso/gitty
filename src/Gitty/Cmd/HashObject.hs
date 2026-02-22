@@ -22,6 +22,7 @@ data Options = Options
 cmdHashObject :: WorkDir -> Options -> IO ()
 cmdHashObject workDir opts = needRepo workDir cmdHashObject'
   where
+    cmdHashObject' :: IO ()
     cmdHashObject'
       | isInsideRepoDir workDir opts.file = return ()
       | otherwise = do

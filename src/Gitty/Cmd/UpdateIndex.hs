@@ -5,6 +5,7 @@
 
 module Gitty.Cmd.UpdateIndex (cmdUpdateIndex, Options (..), definition) where
 
+import Control.Monad (when)
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom, needRepo)
@@ -29,17 +30,16 @@ data Options = Options
 cmdUpdateIndex :: WorkDir -> Options -> IO ()
 cmdUpdateIndex workDir opts = needRepo workDir cmdUpdateIndex'
   where
+    cmdUpdateIndex' :: IO ()
     cmdUpdateIndex' =
       let args =
             if null opts.cacheInfos
               then map (,Nothing,Nothing) opts.files
               else map (\ci -> (ci.file, Just ci.mode, Just ci.oid)) opts.cacheInfos
-       in mapM_
-            (\(file, mode, oid) -> processFile workDir (opts.add, file, mode, oid))
-            args
+       in mapM_ (processFile workDir opts.add) args
 
-processFile :: WorkDir -> (Bool, FilePath, Maybe String, Maybe String) -> IO ()
-processFile workDir (add, file, mode, oid)
+processFile :: WorkDir -> Bool -> (FilePath, Maybe String, Maybe String) -> IO ()
+processFile workDir add (file, mode, oid)
   | isInsideRepoDir workDir file = return ()
   | otherwise = do
       fileError <- Validation.fileAccess workDir file
@@ -47,44 +47,33 @@ processFile workDir (add, file, mode, oid)
       case fileError of
         Just err -> putStrLn err
         Nothing -> do
+          let absFile = makeAbsoluteFrom workDir file
           idx <- Manager.readIdx workDir
-          let exists = Manager.idxEntryExists idx makeFile
+          let exists = Manager.idxEntryExists idx absFile
 
-          if not add && not exists
-            then putStrLn $ "Cannot add " <> file <> " to the index"
-            else do
-              mode' <- makeMode
-              oidEither <- makeOid
+          when (not add && not exists) $
+            putStrLn ("Cannot add " <> file <> " to the index")
 
-              case oidEither of
-                Left err -> putStrLn err
-                Right oid' -> do
-                  let entry =
-                        Manager.IdxEntry
-                          { mode = mode',
-                            oid = oid',
-                            path = makeFile
-                          }
+          when (add || exists) $ do
+            mode' <- maybe (getFileMode absFile) return mode
+            oidEither <- makeOid absFile
 
-                  Manager.writeIdx workDir (Manager.insertIdxEntry idx entry)
+            case oidEither of
+              Left err -> putStrLn err
+              Right oid' ->
+                Manager.writeIdx workDir $
+                  Manager.insertIdxEntry
+                    idx
+                    Manager.IdxEntry {mode = mode', oid = oid', path = absFile}
   where
-    makeFile :: FilePath
-    makeFile = makeAbsoluteFrom workDir file
-
-    makeMode :: IO String
-    makeMode =
-      case mode of
-        Nothing -> getFileMode makeFile
-        Just mode' -> return mode'
-
-    makeOid :: IO (Either String Manager.ObjId)
-    makeOid = case oid of
+    makeOid :: FilePath -> IO (Either String Manager.ObjId)
+    makeOid absFile = case oid of
+      Just oid' -> return $ Manager.validateObjId $ Manager.ObjId oid'
       Nothing -> do
-        content <- ByteString.readFile makeFile
+        content <- ByteString.readFile absFile
         let (oid', obj) = Manager.makeObj Manager.ObjBlob content
         Manager.writeObj workDir (oid', obj)
         return $ Right oid'
-      Just oid' -> return $ Manager.validateObjId $ Manager.ObjId oid'
 
 definition :: CmdDefinition Options
 definition =
