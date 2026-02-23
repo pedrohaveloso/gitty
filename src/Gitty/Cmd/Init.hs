@@ -14,7 +14,7 @@ cmdInit workDir _ = do
     else do
       Directory.createDirectory repoDir
       Directory.createDirectoryIfMissing True $ repoDir </> "refs/heads"
-      writeFile (repoDir </> "head") "refs/heads/main"
+      writeFile (repoDir </> "HEAD") "refs/heads/main"
   where
     repoDir = makeRepoDir workDir
 

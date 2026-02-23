@@ -31,6 +31,7 @@ library
       Gitty.Cmd.Common
       Gitty.Cmd.HashObject
       Gitty.Cmd.Init
+      Gitty.Cmd.RevParse
       Gitty.Cmd.UpdateIndex
       Gitty.Cmd.WriteTree
       Gitty.Common

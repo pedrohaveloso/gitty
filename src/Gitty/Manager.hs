@@ -23,6 +23,7 @@ module Gitty.Manager
     deserializeTreeEntries,
     writeTreeObj,
     readTreeObj,
+    resolveRef,
   )
 where
 
@@ -30,7 +31,7 @@ import Control.Monad (guard, unless)
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
-import Data.Char (toLower)
+import Data.Char (isHexDigit, toLower)
 import Data.Either (partitionEithers)
 import Data.Function ((&))
 import qualified Data.Map as Map
@@ -305,3 +306,36 @@ readTreeObj workDir rootOid = do
           return $ TreeStruct entryName children
     resolveEntry (entryMode, entryName, entryOid) =
       return $ TreeEntry IdxEntry {mode = entryMode, oid = entryOid, path = entryName}
+
+resolveRef :: WorkDir -> String -> IO (Maybe ObjId)
+resolveRef workDir ref
+  | length ref == 40 && all isHexDigit ref = return $ Just (ObjId ref)
+  | ref == "HEAD" = resolveHead workDir
+  | otherwise = readRefFile workDir ("refs/heads/" <> ref)
+
+resolveHead :: WorkDir -> IO (Maybe ObjId)
+resolveHead workDir = do
+  let headPath = makeRepoDir workDir </> "HEAD"
+  exists <- Directory.doesFileExist headPath
+
+  if exists
+    then do
+      content <- readFile headPath
+      readRefFile workDir (trim content)
+    else return Nothing
+
+readRefFile :: WorkDir -> FilePath -> IO (Maybe ObjId)
+readRefFile workDir refPath = do
+  let fullPath = makeRepoDir workDir </> refPath
+  exists <- Directory.doesFileExist fullPath
+
+  if exists
+    then do
+      content <- readFile fullPath
+      case validateObjId (ObjId (trim content)) of
+        Right oid -> return $ Just oid
+        Left _ -> return Nothing
+    else return Nothing
+
+trim :: String -> String
+trim = reverse . dropWhile (== '\n') . reverse . dropWhile (== '\n')

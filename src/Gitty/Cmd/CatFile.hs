@@ -27,7 +27,7 @@ cmdCatFile workDir opts = needRepo workDir catFile
       Right oid -> do
         maybeObj <- Manager.readObj workDir oid
         case maybeObj of
-          Nothing -> putStrLn $ "Not a valid object name " <> opts.oid
+          Nothing -> putStrLn $ "fatal: Not a valid object name " <> opts.oid
           Just obj -> case opts.mode of
             ShowType -> putStrLn $ showKind obj.kind
             ShowSize -> print obj.len
@@ -36,7 +36,7 @@ cmdCatFile workDir opts = needRepo workDir catFile
     prettyPrint :: Manager.Obj -> IO ()
     prettyPrint obj = case obj.kind of
       Manager.ObjTree -> case Manager.deserializeTreeEntries obj.content of
-        Nothing -> putStrLn "Could not parse tree object"
+        Nothing -> putStrLn "fatal: Could not parse tree object"
         Just entries -> mapM_ printTreeEntry entries
       _ -> ByteString.putStr obj.content
 

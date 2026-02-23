@@ -11,6 +11,7 @@ import qualified Gitty.Cmd.CatFile as Cmd.CatFile
 import Gitty.Cmd.Common (CmdDefinition (..))
 import qualified Gitty.Cmd.HashObject as Cmd.HashObject
 import qualified Gitty.Cmd.Init as Cmd.Init
+import qualified Gitty.Cmd.RevParse as Cmd.RevParse
 import qualified Gitty.Cmd.UpdateIndex as Cmd.UpdateIndex
 import qualified Gitty.Cmd.WriteTree as Cmd.WriteTree
 import Gitty.Common (WorkDir)
@@ -25,6 +26,7 @@ commands =
     Command Cmd.CatFile.definition Cmd.CatFile.cmdCatFile,
     Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
     Command Cmd.Init.definition Cmd.Init.cmdInit,
+    Command Cmd.RevParse.definition Cmd.RevParse.cmdRevParse,
     Command Cmd.UpdateIndex.definition Cmd.UpdateIndex.cmdUpdateIndex,
     Command Cmd.WriteTree.definition Cmd.WriteTree.cmdWriteTree
   ]

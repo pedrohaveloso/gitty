@@ -52,14 +52,14 @@ processFile workDir add (file, mode, oid)
           let exists = Manager.idxEntryExists idx absFile
 
           when (not add && not exists) $
-            putStrLn ("Cannot add " <> file <> " to the index")
+            putStrLn ("error: Cannot add " <> file <> " to the index")
 
           when (add || exists) $ do
             mode' <- maybe (getFileMode absFile) return mode
             oidEither <- makeOid absFile
 
             case oidEither of
-              Left err -> putStrLn err
+              Left err -> putStrLn $ "fatal: " <> err
               Right oid' ->
                 Manager.writeIdx workDir $
                   Manager.insertIdxEntry

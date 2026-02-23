@@ -29,7 +29,7 @@ cmdHashObject workDir opts = needRepo workDir hashObject
           fileError <- Validation.fileAccess workDir opts.file
 
           case fileError of
-            Just err -> putStrLn err
+            Just err -> putStrLn $ "fatal: " <> err
             Nothing -> do
               fileContent <- ByteString.readFile file
               let (oid, object) = Manager.makeObj kind fileContent
