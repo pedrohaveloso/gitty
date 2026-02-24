@@ -7,8 +7,8 @@ cabal-version: 2.2
 name:           gitty
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/pedrohaveloso/gitty#readme>
-homepage:       https://github.com/githubuser/gitty#readme
-bug-reports:    https://github.com/githubuser/gitty/issues
+homepage:       https://github.com/pedrohaveloso/gitty#readme
+bug-reports:    https://github.com/pedrohaveloso/gitty/issues
 author:         Pedro Veloso
 maintainer:     contatopedrohalves@gmail.com
 copyright:      2026 Pedro Veloso
@@ -20,7 +20,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/gitty
+  location: https://github.com/pedrohaveloso/gitty
 
 library
   exposed-modules:
@@ -28,6 +28,7 @@ library
       Gitty.Cmd
       Gitty.Cmd.Add
       Gitty.Cmd.CatFile
+      Gitty.Cmd.Commit
       Gitty.Cmd.CommitTree
       Gitty.Cmd.Common
       Gitty.Cmd.HashObject

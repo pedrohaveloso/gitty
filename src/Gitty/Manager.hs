@@ -24,6 +24,10 @@ module Gitty.Manager
     writeTreeObj,
     readTreeObj,
     resolveRef,
+    AuthorInfo (..),
+    getAuthorInfo,
+    getTimestamp,
+    makeCommitObj,
     readSymbolicRef,
     writeSymbolicRef,
     writeRefFile,
@@ -39,8 +43,11 @@ import Data.Char (isHexDigit, toLower)
 import Data.Either (partitionEithers)
 import Data.Function ((&))
 import qualified Data.Map as Map
+import Data.Maybe (fromMaybe)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Gitty.Common (WorkDir, byteStringToHex, compress, decompress, hexToByteString, makeRepoDir)
 import qualified System.Directory as Directory
+import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import Text.Read (readMaybe)
@@ -310,6 +317,35 @@ readTreeObj workDir rootOid = do
           return $ TreeStruct entryName children
     resolveEntry (entryMode, entryName, entryOid) =
       return $ TreeEntry IdxEntry {mode = entryMode, oid = entryOid, path = entryName}
+
+data AuthorInfo = AuthorInfo
+  { name :: String,
+    email :: String
+  }
+
+getAuthorInfo :: IO AuthorInfo
+getAuthorInfo =
+  AuthorInfo
+    <$> lookupEnvOr "GITTY_AUTHOR_NAME" "Gitty"
+    <*> lookupEnvOr "GITTY_AUTHOR_EMAIL" "gitty@localhost"
+  where
+    lookupEnvOr key fallback = fromMaybe fallback <$> lookupEnv key
+
+getTimestamp :: IO String
+getTimestamp = do
+  posixTime <- getPOSIXTime
+  return $ show (floor posixTime :: Integer) <> " +0000"
+
+makeCommitObj :: ObjId -> Maybe ObjId -> AuthorInfo -> String -> String -> (ObjId, Obj)
+makeCommitObj treeOid parentOid author timestamp msg =
+  makeObj ObjCommit (Char8.pack content)
+  where
+    treeLine = "tree " <> show treeOid
+    parentLine = maybe [] (\p -> ["parent " <> show p]) parentOid
+    authorLine = "author " <> author.name <> " <" <> author.email <> "> " <> timestamp
+    committerLine = "committer " <> author.name <> " <" <> author.email <> "> " <> timestamp
+    headers = unlines $ [treeLine] ++ parentLine ++ [authorLine, committerLine]
+    content = headers <> "\n" <> msg <> "\n"
 
 resolveRef :: WorkDir -> String -> IO (Maybe ObjId)
 resolveRef workDir ref

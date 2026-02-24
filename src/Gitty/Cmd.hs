@@ -8,6 +8,7 @@ module Gitty.Cmd (run) where
 import Control.Monad (join)
 import qualified Gitty.Cmd.Add as Cmd.Add
 import qualified Gitty.Cmd.CatFile as Cmd.CatFile
+import qualified Gitty.Cmd.Commit as Cmd.Commit
 import qualified Gitty.Cmd.CommitTree as Cmd.CommitTree
 import Gitty.Cmd.Common (CmdDefinition (..))
 import qualified Gitty.Cmd.HashObject as Cmd.HashObject
@@ -27,6 +28,7 @@ commands :: [Command]
 commands =
   [ Command Cmd.Add.definition Cmd.Add.cmdAdd,
     Command Cmd.CatFile.definition Cmd.CatFile.cmdCatFile,
+    Command Cmd.Commit.definition Cmd.Commit.cmdCommit,
     Command Cmd.CommitTree.definition Cmd.CommitTree.cmdCommitTree,
     Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
     Command Cmd.Init.definition Cmd.Init.cmdInit,

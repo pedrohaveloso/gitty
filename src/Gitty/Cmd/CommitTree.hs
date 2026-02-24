@@ -4,14 +4,10 @@
 
 module Gitty.Cmd.CommitTree (cmdCommitTree, definition) where
 
-import qualified Data.ByteString.Char8 as Char8
-import Data.Maybe (fromMaybe)
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common (WorkDir, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
-import System.Environment (lookupEnv)
 
 data Options = Options
   { tree :: String,
@@ -33,10 +29,10 @@ cmdCommitTree workDir opts = needRepo workDir commitTree
             Left err -> putStrLn err
             Right parentOid' -> do
               msg <- maybe getContents return opts.message
+              author <- Manager.getAuthorInfo
+              timestamp <- Manager.getTimestamp
 
-              content <- buildCommitContent treeOid' parentOid' msg
-
-              let (oid, obj) = Manager.makeObj Manager.ObjCommit (Char8.pack content)
+              let (oid, obj) = Manager.makeCommitObj treeOid' parentOid' author timestamp msg
               Manager.writeObj workDir (oid, obj)
               print oid
 
@@ -61,28 +57,6 @@ cmdCommitTree workDir opts = needRepo workDir commitTree
           return $ case exists of
             Nothing -> Left $ "fatal: not a valid object name " <> p
             Just _ -> Right $ Just oid
-
-buildCommitContent :: Manager.ObjId -> Maybe Manager.ObjId -> String -> IO String
-buildCommitContent treeOid parentOid msg = do
-  timestamp <- getTimestamp
-  authorName <- lookupEnvOr "GITTY_AUTHOR_NAME" "Gitty"
-  authorEmail <- lookupEnvOr "GITTY_AUTHOR_EMAIL" "gitty@localhost"
-
-  let treeLine = "tree " <> show treeOid
-      parentLine = maybe [] (\p -> ["parent " <> show p]) parentOid
-      authorLine = "author " <> authorName <> " <" <> authorEmail <> "> " <> timestamp
-      committerLine = "committer " <> authorName <> " <" <> authorEmail <> "> " <> timestamp
-      headers = unlines $ [treeLine] ++ parentLine ++ [authorLine, committerLine]
-
-  return $ headers <> "\n" <> msg <> "\n"
-
-getTimestamp :: IO String
-getTimestamp = do
-  posixTime <- getPOSIXTime
-  return $ show (floor posixTime :: Integer) <> " +0000"
-
-lookupEnvOr :: String -> String -> IO String
-lookupEnvOr key fallback = fromMaybe fallback <$> lookupEnv key
 
 definition :: CmdDefinition Options
 definition =
