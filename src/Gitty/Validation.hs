@@ -19,7 +19,11 @@ fileAccess workDir file = do
     then return $ Just "The file value is empty"
     else do
       exists <- Directory.doesFileExist absoluteFile
-      readable <- Directory.readable <$> Directory.getPermissions absoluteFile
+
+      readable <-
+        if exists
+          then Directory.readable <$> Directory.getPermissions absoluteFile
+          else return False
 
       return $ validateFileAccess file exists readable inRepo
   where

@@ -7,7 +7,7 @@ module Gitty.Cmd.CatFile (cmdCatFile, definition) where
 import Control.Applicative ((<|>))
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, needRepo)
+import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 
@@ -23,11 +23,11 @@ cmdCatFile workDir opts = needRepo workDir catFile
   where
     catFile :: IO ()
     catFile = case Manager.validateObjId (Manager.ObjId opts.oid) of
-      Left err -> putStrLn err
+      Left err -> die err
       Right oid -> do
         maybeObj <- Manager.readObj workDir oid
         case maybeObj of
-          Nothing -> putStrLn $ "fatal: Not a valid object name " <> opts.oid
+          Nothing -> die $ "fatal: Not a valid object name " <> opts.oid
           Just obj -> case opts.mode of
             ShowType -> putStrLn $ showKind obj.kind
             ShowSize -> print obj.len

@@ -7,7 +7,7 @@ module Gitty.Cmd.HashObject (cmdHashObject, definition) where
 import Control.Monad (when)
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, isInsideRepoDir, makeAbsoluteFrom, needRepo)
+import Gitty.Common (WorkDir, die, isInsideRepoDir, makeAbsoluteFrom, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
@@ -29,7 +29,7 @@ cmdHashObject workDir opts = needRepo workDir hashObject
           fileError <- Validation.fileAccess workDir opts.file
 
           case fileError of
-            Just err -> putStrLn $ "fatal: " <> err
+            Just err -> die $ "fatal: " <> err
             Nothing -> do
               fileContent <- ByteString.readFile file
               let (oid, object) = Manager.makeObj kind fileContent

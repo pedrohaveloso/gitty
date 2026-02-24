@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -9,6 +8,7 @@ import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common
   ( WorkDir,
+    die,
     getFileMode,
     getRecursiveFiles,
     isInsideRepoDir,
@@ -30,12 +30,19 @@ cmdAdd workDir opts = needRepo workDir (mapM_ add opts.paths)
     add :: FilePath -> IO ()
     add path
       | isInsideRepoDir workDir path = return ()
-      | otherwise =
-          Directory.doesDirectoryExist path >>= \case
-            True -> do
-              files <- getRecursiveFiles path
+      | otherwise = do
+          let absPath = makeAbsoluteFrom workDir path
+          isDir <- Directory.doesDirectoryExist absPath
+          isFile <- Directory.doesFileExist absPath
+
+          if isDir
+            then do
+              files <- getRecursiveFiles absPath
               mapM_ addSingle files
-            _ -> addSingle path
+            else
+              if isFile
+                then addSingle path
+                else die $ "fatal: pathspec '" <> path <> "' did not match any files"
 
     addSingle :: FilePath -> IO ()
     addSingle file = do

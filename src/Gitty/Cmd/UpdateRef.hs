@@ -5,7 +5,7 @@
 module Gitty.Cmd.UpdateRef (cmdUpdateRef, definition) where
 
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, needRepo)
+import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 
@@ -21,16 +21,16 @@ cmdUpdateRef workDir opts = needRepo workDir $ case (opts.delete, opts.newValue)
     deleted <- Manager.deleteRefFile workDir opts.ref
     if deleted
       then return ()
-      else putStrLn $ "fatal: could not delete ref " <> opts.ref
+      else die $ "fatal: could not delete ref " <> opts.ref
   (False, Just newValue) -> case Manager.validateObjId (Manager.ObjId newValue) of
-    Left err -> putStrLn err
+    Left err -> die err
     Right oid -> do
       exists <- Manager.readObj workDir oid
       case exists of
-        Nothing -> putStrLn $ "fatal: not a valid object name " <> newValue
+        Nothing -> die $ "fatal: not a valid object name " <> newValue
         Just _ -> Manager.writeRefFile workDir opts.ref oid
   (False, Nothing) ->
-    putStrLn "fatal: missing new value for update-ref"
+    die "fatal: missing new value for update-ref"
 
 definition :: CmdDefinition Options
 definition =

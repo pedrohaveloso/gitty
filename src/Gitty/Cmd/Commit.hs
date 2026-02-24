@@ -6,7 +6,7 @@ module Gitty.Cmd.Commit (cmdCommit, definition) where
 
 import qualified Data.ByteString.Char8 as Char8
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, needRepo)
+import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 
@@ -22,7 +22,7 @@ cmdCommit workDir opts = needRepo workDir commit
       idx <- Manager.readIdx workDir
 
       if null idx.entries
-        then putStrLn "nothing to commit"
+        then die "nothing to commit"
         else do
           let tree = Manager.mountTreeStructFromIdx idx
           treeOid <- Manager.writeTreeObj workDir tree
@@ -30,21 +30,25 @@ cmdCommit workDir opts = needRepo workDir commit
           headTreeOid <- getHeadTreeOid parentOid
 
           if headTreeOid == Just treeOid
-            then putStrLn "Nothing to commit, working tree clean"
+            then die "nothing to commit, working tree clean"
             else do
               msg <- maybe getContents return opts.message
-              author <- Manager.getAuthorInfo
-              timestamp <- Manager.getTimestamp
 
-              let (commitOid, commitObj) = Manager.makeCommitObj treeOid parentOid author timestamp msg
-              Manager.writeObj workDir (commitOid, commitObj)
+              if not (any (\c -> c /= ' ' && c /= '\n' && c /= '\t') msg)
+                then die "Aborting commit due to empty commit message."
+                else do
+                  author <- Manager.getAuthorInfo
+                  timestamp <- Manager.getTimestamp
 
-              headRef <- Manager.readSymbolicRef workDir "HEAD"
-              case headRef of
-                Just ref -> Manager.writeRefFile workDir ref commitOid
-                Nothing -> return ()
+                  let (commitOid, commitObj) = Manager.makeCommitObj treeOid parentOid author timestamp msg
+                  Manager.writeObj workDir (commitOid, commitObj)
 
-              putStrLn $ "[" <> branchName headRef <> " " <> shortOid commitOid <> "] " <> firstLine msg
+                  headRef <- Manager.readSymbolicRef workDir "HEAD"
+                  case headRef of
+                    Just ref -> Manager.writeRefFile workDir ref commitOid
+                    Nothing -> return ()
+
+                  putStrLn $ "[" <> branchName headRef <> " " <> shortOid commitOid <> "] " <> firstLine msg
 
     getHeadTreeOid :: Maybe Manager.ObjId -> IO (Maybe Manager.ObjId)
     getHeadTreeOid Nothing = return Nothing

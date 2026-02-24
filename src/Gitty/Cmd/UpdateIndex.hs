@@ -8,7 +8,7 @@ module Gitty.Cmd.UpdateIndex (cmdUpdateIndex, Options (..), definition) where
 import Control.Monad (when)
 import qualified Data.ByteString as ByteString
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, getFileMode, isInsideRepoDir, makeAbsoluteFrom, makeRelativeTo, needRepo)
+import Gitty.Common (WorkDir, die, getFileMode, isInsideRepoDir, makeAbsoluteFrom, makeRelativeTo, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Gitty.Validation as Validation
 import qualified Options.Applicative as Cli
@@ -45,7 +45,7 @@ processFile workDir add (file, mode, oid)
       fileError <- Validation.fileAccess workDir file
 
       case fileError of
-        Just err -> putStrLn err
+        Just err -> die err
         Nothing -> do
           let absFile = makeAbsoluteFrom workDir file
           idx <- Manager.readIdx workDir
@@ -59,7 +59,7 @@ processFile workDir add (file, mode, oid)
             oidEither <- makeOid absFile
 
             case oidEither of
-              Left err -> putStrLn $ "fatal: " <> err
+              Left err -> die $ "fatal: " <> err
               Right oid' ->
                 Manager.writeIdx workDir $
                   Manager.insertIdxEntry

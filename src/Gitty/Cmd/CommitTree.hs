@@ -5,7 +5,7 @@
 module Gitty.Cmd.CommitTree (cmdCommitTree, definition) where
 
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, needRepo)
+import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 
@@ -22,11 +22,11 @@ cmdCommitTree workDir opts = needRepo workDir commitTree
     commitTree = do
       treeOid <- validateTree
       case treeOid of
-        Left err -> putStrLn err
+        Left err -> die err
         Right treeOid' -> do
           parentOid <- validateParent
           case parentOid of
-            Left err -> putStrLn err
+            Left err -> die err
             Right parentOid' -> do
               msg <- maybe getContents return opts.message
               author <- Manager.getAuthorInfo

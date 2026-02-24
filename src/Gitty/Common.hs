@@ -12,6 +12,7 @@ module Gitty.Common
     byteStringToHex,
     hexToByteString,
     needRepo,
+    die,
   )
 where
 
@@ -24,6 +25,7 @@ import Data.Function ((&))
 import Data.List (isPrefixOf)
 import System.Directory (doesDirectoryExist, listDirectory)
 import qualified System.Directory as Directory
+import System.Exit (exitFailure)
 import System.FilePath (isAbsolute, makeRelative, normalise, (</>))
 import System.Posix (fileMode, getFileStatus)
 import Text.Printf (printf)
@@ -91,7 +93,7 @@ hexToByteString = ByteString.pack . pairs
 needRepo :: WorkDir -> IO () -> IO ()
 needRepo workDir fn = do
   exists <- repoExists
-  maybe fn putStrLn exists
+  maybe fn die exists
   where
     repoExists :: IO (Maybe String)
     repoExists = do
@@ -101,4 +103,7 @@ needRepo workDir fn = do
 
       if exists
         then return Nothing
-        else return $ Just $ "There is no repository in that folder (" <> workDir <> ")."
+        else return $ Just $ "fatal: There is no repository in that folder (" <> workDir <> ")."
+
+die :: String -> IO a
+die msg = putStrLn msg >> exitFailure

@@ -2,7 +2,7 @@ module Gitty.Cmd.RevParse (cmdRevParse, definition) where
 
 import Control.Applicative ((<|>))
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, makeRelativeTo, makeRepoDir, needRepo)
+import Gitty.Common (WorkDir, die, makeRelativeTo, makeRepoDir, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 import qualified System.Directory as Directory
@@ -34,7 +34,7 @@ cmdRevParse workDir mode = case mode of
       result <- Manager.resolveRef workDir ref
       case result of
         Just oid -> print oid
-        Nothing -> putStrLn $ ref <> ": unknown revision or path"
+        Nothing -> die $ ref <> ": unknown revision or path"
 
     verify :: Bool -> String -> IO ()
     verify quiet ref = do

@@ -5,7 +5,7 @@
 module Gitty.Cmd.SymbolicRef (cmdSymbolicRef, definition) where
 
 import Gitty.Cmd.Common (CmdDefinition (..))
-import Gitty.Common (WorkDir, needRepo)
+import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
 import qualified Options.Applicative as Cli
 
@@ -21,7 +21,7 @@ cmdSymbolicRef workDir opts = needRepo workDir $ case opts.target of
     result <- Manager.readSymbolicRef workDir opts.refName
     case result of
       Just ref -> putStrLn ref
-      Nothing -> putStrLn $ "fatal: ref " <> opts.refName <> " is not a symbolic ref"
+      Nothing -> die $ "fatal: ref " <> opts.refName <> " is not a symbolic ref"
 
 definition :: CmdDefinition Options
 definition =

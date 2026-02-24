@@ -351,7 +351,11 @@ resolveRef :: WorkDir -> String -> IO (Maybe ObjId)
 resolveRef workDir ref
   | length ref == 40 && all isHexDigit ref = return $ Just (ObjId ref)
   | ref == "HEAD" = resolveHead workDir
-  | otherwise = readRefFile workDir ("refs/heads/" <> ref)
+  | otherwise = do
+      branch <- readRefFile workDir ("refs/heads/" <> ref)
+      case branch of
+        Just _ -> return branch
+        Nothing -> readRefFile workDir ("refs/tags/" <> ref)
 
 resolveHead :: WorkDir -> IO (Maybe ObjId)
 resolveHead workDir = do

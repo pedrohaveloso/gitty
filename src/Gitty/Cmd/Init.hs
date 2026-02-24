@@ -7,12 +7,11 @@ import System.FilePath ((</>))
 
 cmdInit :: WorkDir -> () -> IO ()
 cmdInit workDir _ = do
-  exists <- Directory.doesFileExist repoDir
+  exists <- Directory.doesDirectoryExist repoDir
 
   if exists
-    then return ()
+    then putStrLn "Repository already exists."
     else do
-      Directory.createDirectory repoDir
       Directory.createDirectoryIfMissing True $ repoDir </> "refs/heads"
       writeFile (repoDir </> "HEAD") "refs/heads/main"
   where
