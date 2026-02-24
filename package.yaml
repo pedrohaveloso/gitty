@@ -30,6 +30,7 @@ dependencies:
 - zlib >= 0.7.1.1
 - unix >= 2.8
 - optparse-applicative >= 0.18.1.0
+- time
 
 ghc-options:
 - -Wall

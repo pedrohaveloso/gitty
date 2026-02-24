@@ -49,7 +49,7 @@ instance Show ObjId where
   show (ObjId oid) = oid
 
 data ObjKind = ObjBlob | ObjCommit | ObjTree | ObjTag
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
 
 objKindFromString :: String -> ObjKind
 objKindFromString raw
