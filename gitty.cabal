@@ -33,7 +33,9 @@ library
       Gitty.Cmd.HashObject
       Gitty.Cmd.Init
       Gitty.Cmd.RevParse
+      Gitty.Cmd.SymbolicRef
       Gitty.Cmd.UpdateIndex
+      Gitty.Cmd.UpdateRef
       Gitty.Cmd.WriteTree
       Gitty.Common
       Gitty.Manager

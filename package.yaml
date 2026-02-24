@@ -1,6 +1,6 @@
 name:                gitty
 version:             0.1.0.0
-github:              "githubuser/gitty"
+github:              "pedrohaveloso/gitty"
 license:             BSD-3-Clause
 author:              "Pedro Veloso"
 maintainer:          "contatopedrohalves@gmail.com"

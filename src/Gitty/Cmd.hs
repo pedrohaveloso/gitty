@@ -13,7 +13,9 @@ import Gitty.Cmd.Common (CmdDefinition (..))
 import qualified Gitty.Cmd.HashObject as Cmd.HashObject
 import qualified Gitty.Cmd.Init as Cmd.Init
 import qualified Gitty.Cmd.RevParse as Cmd.RevParse
+import qualified Gitty.Cmd.SymbolicRef as Cmd.SymbolicRef
 import qualified Gitty.Cmd.UpdateIndex as Cmd.UpdateIndex
+import qualified Gitty.Cmd.UpdateRef as Cmd.UpdateRef
 import qualified Gitty.Cmd.WriteTree as Cmd.WriteTree
 import Gitty.Common (WorkDir)
 import qualified Options.Applicative as Cli
@@ -29,7 +31,9 @@ commands =
     Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
     Command Cmd.Init.definition Cmd.Init.cmdInit,
     Command Cmd.RevParse.definition Cmd.RevParse.cmdRevParse,
+    Command Cmd.SymbolicRef.definition Cmd.SymbolicRef.cmdSymbolicRef,
     Command Cmd.UpdateIndex.definition Cmd.UpdateIndex.cmdUpdateIndex,
+    Command Cmd.UpdateRef.definition Cmd.UpdateRef.cmdUpdateRef,
     Command Cmd.WriteTree.definition Cmd.WriteTree.cmdWriteTree
   ]
 

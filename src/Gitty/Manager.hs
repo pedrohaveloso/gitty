@@ -24,6 +24,10 @@ module Gitty.Manager
     writeTreeObj,
     readTreeObj,
     resolveRef,
+    readSymbolicRef,
+    writeSymbolicRef,
+    writeRefFile,
+    deleteRefFile,
   )
 where
 
@@ -336,6 +340,39 @@ readRefFile workDir refPath = do
         Right oid -> return $ Just oid
         Left _ -> return Nothing
     else return Nothing
+
+readSymbolicRef :: WorkDir -> FilePath -> IO (Maybe FilePath)
+readSymbolicRef workDir name = do
+  let fullPath = makeRepoDir workDir </> name
+  exists <- Directory.doesFileExist fullPath
+
+  if exists
+    then do
+      content <- readFile fullPath
+      let ref = trim content
+      return $ if null ref then Nothing else Just ref
+    else return Nothing
+
+writeSymbolicRef :: WorkDir -> FilePath -> FilePath -> IO ()
+writeSymbolicRef workDir name =
+  writeFile (makeRepoDir workDir </> name)
+
+writeRefFile :: WorkDir -> FilePath -> ObjId -> IO ()
+writeRefFile workDir refPath (ObjId oid) = do
+  let fullPath = makeRepoDir workDir </> refPath
+  Directory.createDirectoryIfMissing True (FilePath.takeDirectory fullPath)
+  writeFile fullPath oid
+
+deleteRefFile :: WorkDir -> FilePath -> IO Bool
+deleteRefFile workDir refPath = do
+  let fullPath = makeRepoDir workDir </> refPath
+  exists <- Directory.doesFileExist fullPath
+
+  if exists
+    then do
+      Directory.removeFile fullPath
+      return True
+    else return False
 
 trim :: String -> String
 trim = reverse . dropWhile (== '\n') . reverse . dropWhile (== '\n')
