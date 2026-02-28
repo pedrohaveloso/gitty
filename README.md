@@ -1,6 +1,8 @@
 # Gitty
 
-Em desenvolvimento... Comandos suportados atualmente:
+Uma cópia do git usando Haskell.
+
+Comandos já suportados (parcialmente):
 
 ```txt
 gitty init

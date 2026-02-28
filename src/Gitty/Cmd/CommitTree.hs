@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
@@ -19,9 +20,8 @@ cmdCommitTree :: WorkDir -> Options -> IO ()
 cmdCommitTree workDir opts = needRepo workDir commitTree
   where
     commitTree :: IO ()
-    commitTree = do
-      treeOid <- validateTree
-      case treeOid of
+    commitTree =
+      validateTree >>= \case
         Left err -> die err
         Right treeOid' -> do
           parentOid <- validateParent
