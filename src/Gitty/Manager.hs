@@ -28,6 +28,8 @@ module Gitty.Manager
     getAuthorInfo,
     getTimestamp,
     makeCommitObj,
+    CommitInfo (..),
+    parseCommitContent,
     readSymbolicRef,
     writeSymbolicRef,
     writeRefFile,
@@ -346,6 +348,39 @@ makeCommitObj treeOid parentOid author timestamp msg =
     committerLine = "committer " <> author.name <> " <" <> author.email <> "> " <> timestamp
     headers = unlines $ [treeLine] ++ parentLine ++ [authorLine, committerLine]
     content = headers <> "\n" <> msg <> "\n"
+
+data CommitInfo = CommitInfo
+  { tree :: ObjId,
+    parent :: Maybe ObjId,
+    author :: String,
+    committer :: String,
+    message :: String
+  }
+
+parseCommitContent :: ByteString.ByteString -> Maybe CommitInfo
+parseCommitContent bs = do
+  let content = Char8.unpack bs
+      allLines = lines content
+      (headerLines, rest) = break null allLines
+      headers = map parseHeader headerLines
+      msg = dropWhileEnd (== '\n') (unlines (drop 1 rest))
+
+  treeStr <- lookup "tree" headers
+
+  Just
+    CommitInfo
+      { tree = ObjId treeStr,
+        parent = ObjId <$> lookup "parent" headers,
+        author = fromMaybe "" $ lookup "author" headers,
+        committer = fromMaybe "" $ lookup "committer" headers,
+        message = msg
+      }
+  where
+    parseHeader line = case break (== ' ') line of
+      (key, ' ' : value) -> (key, value)
+      _ -> ("", line)
+
+    dropWhileEnd p = reverse . dropWhile p . reverse
 
 resolveRef :: WorkDir -> String -> IO (Maybe ObjId)
 resolveRef workDir ref

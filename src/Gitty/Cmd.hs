@@ -13,7 +13,9 @@ import qualified Gitty.Cmd.CommitTree as Cmd.CommitTree
 import Gitty.Cmd.Common (CmdDefinition (..))
 import qualified Gitty.Cmd.HashObject as Cmd.HashObject
 import qualified Gitty.Cmd.Init as Cmd.Init
+import qualified Gitty.Cmd.Log as Cmd.Log
 import qualified Gitty.Cmd.RevParse as Cmd.RevParse
+import qualified Gitty.Cmd.Status as Cmd.Status
 import qualified Gitty.Cmd.SymbolicRef as Cmd.SymbolicRef
 import qualified Gitty.Cmd.UpdateIndex as Cmd.UpdateIndex
 import qualified Gitty.Cmd.UpdateRef as Cmd.UpdateRef
@@ -32,7 +34,9 @@ commands =
     Command Cmd.CommitTree.definition Cmd.CommitTree.cmdCommitTree,
     Command Cmd.HashObject.definition Cmd.HashObject.cmdHashObject,
     Command Cmd.Init.definition Cmd.Init.cmdInit,
+    Command Cmd.Log.definition Cmd.Log.cmdLog,
     Command Cmd.RevParse.definition Cmd.RevParse.cmdRevParse,
+    Command Cmd.Status.definition Cmd.Status.cmdStatus,
     Command Cmd.SymbolicRef.definition Cmd.SymbolicRef.cmdSymbolicRef,
     Command Cmd.UpdateIndex.definition Cmd.UpdateIndex.cmdUpdateIndex,
     Command Cmd.UpdateRef.definition Cmd.UpdateRef.cmdUpdateRef,

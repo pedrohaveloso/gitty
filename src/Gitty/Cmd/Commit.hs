@@ -4,7 +4,6 @@
 
 module Gitty.Cmd.Commit (cmdCommit, definition) where
 
-import qualified Data.ByteString.Char8 as Char8
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common (WorkDir, die, needRepo)
 import qualified Gitty.Manager as Manager
@@ -54,13 +53,9 @@ cmdCommit workDir opts = needRepo workDir commit
     getHeadTreeOid Nothing = return Nothing
     getHeadTreeOid (Just pid) = do
       maybeObj <- Manager.readObj workDir pid
-      return $ case maybeObj of
+      return $ case maybeObj >>= Manager.parseCommitContent . (.content) of
+        Just info -> Just info.tree
         Nothing -> Nothing
-        Just obj ->
-          let header = takeWhile (/= '\n') (Char8.unpack obj.content)
-           in case words header of
-                ["tree", oid] -> Just (Manager.ObjId oid)
-                _ -> Nothing
 
     branchName :: Maybe FilePath -> String
     branchName (Just ref) = drop (length ("refs/heads/" :: String)) ref
