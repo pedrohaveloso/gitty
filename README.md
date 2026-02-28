@@ -26,4 +26,8 @@ gitty update-ref [-d] REF [NEWVALUE]
 gitty add FILES/DIRS
 
 gitty commit [-m|--message MESSAGE]
+
+gitty status
+
+gitty log
 ```

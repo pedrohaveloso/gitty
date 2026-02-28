@@ -6,8 +6,8 @@ module Gitty.Cmd.Status (cmdStatus, definition) where
 
 import Control.Monad (filterM, when)
 import qualified Data.ByteString as ByteString
-import qualified Data.Map as Map
 import Data.List (sort)
+import qualified Data.Map as Map
 import Gitty.Cmd.Common (CmdDefinition (..))
 import Gitty.Common
   ( WorkDir,
@@ -41,10 +41,10 @@ cmdStatus workDir _ = needRepo workDir status
       let stagedNewOrModified =
             sort
               [ e.path
-                | e <- idx.entries,
-                  case Map.lookup e.path headTreeMap of
-                    Nothing -> True
-                    Just headOid -> headOid /= e.oid
+              | e <- idx.entries,
+                case Map.lookup e.path headTreeMap of
+                  Nothing -> True
+                  Just headOid -> headOid /= e.oid
               ]
           stagedDeleted =
             sort [p | p <- Map.keys headTreeMap, p `notElem` indexPaths]
@@ -65,8 +65,8 @@ cmdStatus workDir _ = needRepo workDir status
         else do
           when hasStaged $
             printSection "Changes to be committed:" $
-              [ "\tnew file:   " <> p | p <- stagedNewOrModified, p `notElem` Map.keys headTreeMap ]
-                ++ [ "\tmodified:   " <> p | p <- stagedNewOrModified, p `elem` Map.keys headTreeMap ]
+              ["\tnew file:   " <> p | p <- stagedNewOrModified, p `notElem` Map.keys headTreeMap]
+                ++ ["\tmodified:   " <> p | p <- stagedNewOrModified, p `elem` Map.keys headTreeMap]
                 ++ map ("\tdeleted:    " <>) stagedDeleted
 
           when hasUnstaged $ do
