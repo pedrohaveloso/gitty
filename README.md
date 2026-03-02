@@ -1,6 +1,6 @@
 # Gitty
 
-Uma cópia do git usando Haskell.
+Uma tentativa de cópia do git usando Haskell.
 
 Comandos já suportados (parcialmente):
 
